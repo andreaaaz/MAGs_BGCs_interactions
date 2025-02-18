@@ -1,0 +1,129 @@
+---
+title: "Identifying interaction workflow"
+author: "Andrea Zermeño Díaz"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(dplyr)
+```
+
+```{r, load_data}
+setwd(".")
+meta_mags <- read.csv("metadata.csv")
+meta_bgcs <- read.csv("bgcs_metadata.csv")
+
+# We are grouping by mOTUS so we need to omit the NAs / For other categories skip this 
+meta_mags <- meta_mags %>% filter(!is.na(mOTUs.Species.Cluster))
+meta_bgcs <- meta_bgcs %>%
+  filter(Genome %in% meta_mags$Genome)
+```
+
+Add the locations to the BGCs table based on the MAGs from where they were found And count the number of BGCs per site and GCF (gene cluster families)
+
+```{r count_bgcs}
+bgcs_sites <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, station), by = "Genome")
+
+gcfs <- bgcs_sites %>% 
+  distinct(gcf)
+gcfs_by_sites <- bgcs_sites %>%
+  count(station, gcf) %>%
+  pivot_wider(names_from = gcf, values_from = n, values_fill = 0)
+```
+
+Count the number of MAGs per site and motus
+
+```{r count_mags}
+motus <- meta_mags %>% 
+  distinct(mOTUs.Species.Cluster)
+motus_by_sites <- meta_mags %>%
+  count(station, mOTUs.Species.Cluster) %>%
+  pivot_wider(names_from = mOTUs.Species.Cluster, values_from = n, values_fill = 0)
+```
+
+Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,139 x 3,935 tables (20,221,965) tables of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. 
+
+```{r try3}
+
+# Quitamos "station" de los nombres de las columnas
+motus_cols <- setdiff(colnames(motus_by_sites), "station")
+gcfs_cols <- setdiff(colnames(gcfs_by_sites), "station")
+
+# Generamos todas las combinaciones posibles
+combinaciones <- map2(
+  rep(motus_cols, each = length(gcfs_cols)), 
+  rep(gcfs_cols, times = length(motus_cols)),
+  ~ motus_by_sites %>%
+    select(station, .x) %>%
+    full_join(gcfs_by_sites %>% select(station, .y), by = "station") %>%
+    rename_with(~ c("station", .x, .y), everything())
+)
+```
+
+```{r try2}
+combinaciones <- list()
+
+cont <- 1
+for (col1 in colnames(motus_by_sites)) {
+  if (col1 == "station") next  # Saltamos la columna "sitio"
+  
+  for (col2 in colnames(gcfs_by_sites)) {
+    if (col2 == "station") next  # Saltamos la columna "sitio"
+
+    # Seleccionamos sitio + la columna de tabla1 y la columna de tabla2
+    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
+    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
+    
+    # Unimos por "sitio"
+    combinaciones[[cont]] <- full_join(temp1, temp2, by = "station")
+    names(combinaciones[[cont]]) <- c("station", col1, col2)
+    
+    cont <- cont + 1
+  }
+}
+
+```
+
+```{r try1}
+combinaciones <- list()
+
+contador <- 1
+for (col1 in colnames(motus_by_sites)) {
+  for (col2 in colnames(gcfs_by_sites)) {
+    combinaciones[[contador]] <- data.frame(motus_by_sites[[col1]], gcfs_by_sites[[col2]])
+    names(combinaciones[[contador]]) <- c(col1, col2)
+    contador <- contador + 1
+  }
+}
+
+#
+
+# names(combinaciones) <- paste(rep(colnames(tabla1), each = ncol(tabla2)),
+#                              rep(colnames(tabla2), times = ncol(tabla1)),
+#                              sep = "_")
+
+```
+
+
+```{r check}
+
+meta_mags %>%
+  group_by(mOTUs.Species.Cluster) %>%                     
+  summarise(n = n()) %>%                 
+  filter(n == 1)   
+names(which(table(meta_mags$mOTUs.Species.Cluster) == 1))
+
+
+setdiff(motus_by_sites$station, gcfs_by_sites$station)
+setdiff(meta_mags$station, bgcs_sites$station)
+```
+
+
+
+# Perfect co-exclusion
+To find a perfect co-exclusion pattern we need to see+
+
+
