@@ -1,0 +1,185 @@
+---
+title: "Exploratory annalysis of OMD data"
+author: "Andrea Zermeño Díaz"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 6
+    theme: cerulean
+  pdf_document:
+    toc: yes
+    toc_depth: '6'
+  rmdformats: default
+---
+
+Here we obtain only the information of the recontructed MAGs without the REFs and SAGs.
+
+```{r library, message=FALSE, warning=FALSE}
+library(readxl)
+library(tidyverse)
+library(terra)
+library(dplyr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+Archive downloades from 
+```{r load_data}
+setwd("/home/azermeno/Downloads")
+# Bins and MAGs accessions from the mag 
+raw_access <- read_excel("41586_2022_4862_MOESM4_ESM.xlsx", 
+                         sheet = "Metagenomic Bins and MAGs acces")
+# Raw genomes summary table
+metadata <- read_excel("41586_2022_4862_MOESM4_ESM.xlsx", 
+                       sheet = "MAGs summary table")
+
+```
+
+
+Obtaining the list of the recontructed MAGs (26,293) from the accession list (without the bins) and filter the metadata. 
+```{r filter_data}
+# Eliminate Bins from data set, rename columns
+mags_access <- raw_access %>%
+  filter(`BIN/MAG` == "MAG" & `BIN/MAG accession` != "CAKNWM000000000.1") %>%
+  rename_with(~ str_replace(., "^BIN/MAG", "MAG"))
+
+
+# Verify that that each MAG name is present only once in the metadata
+repeats <- mags_access %>%
+  anti_join(metadata, by = c("MAG name" = "Genome")) 
+ #semi_join si quiero ver los 26,293 MAGs sin repeticion
+nrow(repeats) # 0 repetidos
+# confirmar que los accessions son unicos (value = TRUE)
+unicos <- n_distinct(mags_access$`MAG accession`) == nrow(mags_access)
+unicos
+
+# filter
+metadata_filt <- metadata %>%
+  semi_join(mags_access, by = c("Genome" = "MAG name"))
+
+write.csv(metadata_filt, "/home/azermeno/metadata.csv", row.names = FALSE)
+```
+
+
+
+```{r plot_locations, message=FALSE, warning=FALSE }
+sites <- data.frame(
+  id = metadata_filt$station,
+  latitud = metadata_filt$latitude,
+  longitud = metadata_filt$longitude
+)
+
+# Count repeated sites
+sites_grouped <- sites %>%
+  group_by(latitud, longitud) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(
+    latitud = as.numeric(latitud),
+    longitud = as.numeric(longitud)
+  )
+
+# Convertir a objeto espacial
+sites_vect <- vect(sites_grouped, geom = c("longitud", "latitud"), crs = "EPSG:4326")
+
+
+mundo <- ne_countries(scale = "medium", returnclass = "sf")
+oceanos <- ne_download(scale = "medium", type = "ocean", category = "physical", returnclass = "sf")
+
+# Graficar con tamaño proporcional
+map <- ggplot() +
+  geom_sf(data = oceanos, fill = "#b4d3e2", color = NA) +
+  geom_sf(data = mundo, fill = "#5b6684", color = "#5b6684") +
+  geom_point(data = sites_grouped, aes(x = longitud, y = latitud, size = count), color = "#00349e", alpha = 1) +
+  scale_size_continuous(range = c(0.2, 4), name = "MAGs per location") +
+  theme_minimal() 
+ggsave("map.png", plot = map, width = 42, height = 22, units = "cm")
+```
+
+
+```{r plot_depth}
+stations <- metadata_filt %>%
+  distinct(`depth layer`)
+
+conteo_genomas_por_lugar <- metadata_filt %>%
+  count(`depth layer`, name = "num_genomas")
+
+
+depth <- ggplot(conteo_genomas_por_lugar, aes(x = reorder(`depth layer`, num_genomas), y = num_genomas, fill = num_genomas)) +
+  geom_bar(stat = "identity") +
+  scale_y_log10() +
+  scale_fill_gradientn(
+    colors = c("black","#00008b","#4682b4", "#add8e6"), # Paleta de colores
+    values = scales::rescale(c(65, 1075, 4671, 20482))  # Ajusta el impacto de los colores
+  ) +
+  labs(x = "Depth layer", y = "Number of MAGs", fill = "Number of MAGs") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 18),  # Tamaño del texto de los números del eje x
+    axis.title.x = element_text(size = 18)# Tamaño de la etiqueta del eje y
+  )
+ggsave("depth_layers.png", plot = depth, width = 34, height = 18, units = "cm")
+
+```
+
+frequency 
+
+```{r plot_vogage}
+
+
+```
+
+
+
+
+
+# BGCs
+```{r, warning=FALSE, message=FALSE}
+setwd("/home/azermeno/Downloads")
+bgcs <- read_csv("Microbiomics_Website.csv")
+bgcs_filt <- bgcs %>%
+  filter(Genome %in% metadata_filt$Genome)
+write.csv(bgcs_filt, "/home/azermeno/bgcs_metadata.csv", row.names = FALSE)
+
+
+bgc_long <- bgcs_filt %>%
+  pivot_longer(cols = c(`Non Ribosomal Peptide Synthetases`,
+                        `Type I Polyketide Synthases`,
+                        `Type II/III Polyketide Synthases`,
+                        `RiPPs (Ribosomal_Natural_Products)`,
+                        `Terpenes`,
+                        `Other`),
+               names_to = "BGC_Type", values_to = "Presence") %>%
+  filter(Presence == TRUE)  # Filtrar solo las filas donde Presence es TRUE
+
+# Verificar el resultado
+abreviaciones <- c(
+  "Non Ribosomal Peptide Synthetases" = "NRPS",
+  "Type I Polyketide Synthases" = "PKS-I",
+  "Type II/III Polyketide Synthases" = "PKS-II/III",
+  "RiPPs (Ribosomal_Natural_Products)" = "RiPPs",
+  "Terpenes" = "Terpenes",
+  "Other" = "Other"
+)
+
+bgcs_class <- ggplot(bgc_long, aes(x = BGC_Type, fill = BGC_Type)) +
+  geom_bar() +  # Crear barras
+  theme_minimal() +  # Tema minimalista
+  labs(y = "Number of BGCs",
+       x = "Class of BGC") +
+  coord_flip() +  # Voltear ejes
+  scale_x_discrete(labels = abreviaciones) +
+  scale_fill_viridis_d(option = "D") +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 18),  # Tamaño del texto de los números del eje x
+    axis.title.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18)
+  )
+ggsave("bgcs.png", plot = bgcs_class, width = 35, height = 18, units = "in")
+
+```
+
