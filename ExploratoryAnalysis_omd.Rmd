@@ -27,7 +27,7 @@ library(rnaturalearthdata)
 
 Archive downloades from 
 ```{r load_data}
-setwd("/home/azermeno/Downloads")
+setwd(".")
 # Bins and MAGs accessions from the mag 
 raw_access <- read_excel("41586_2022_4862_MOESM4_ESM.xlsx", 
                          sheet = "Metagenomic Bins and MAGs acces")
@@ -59,7 +59,7 @@ unicos
 metadata_filt <- metadata %>%
   semi_join(mags_access, by = c("Genome" = "MAG name"))
 
-write.csv(metadata_filt, "/home/azermeno/metadata.csv", row.names = FALSE)
+write.csv(metadata_filt, "./metadata.csv", row.names = FALSE)
 ```
 
 
@@ -138,11 +138,10 @@ frequency
 
 # BGCs
 ```{r, warning=FALSE, message=FALSE}
-setwd("/home/azermeno/Downloads")
 bgcs <- read_csv("Microbiomics_Website.csv")
 bgcs_filt <- bgcs %>%
   filter(Genome %in% metadata_filt$Genome)
-write.csv(bgcs_filt, "/home/azermeno/bgcs_metadata.csv", row.names = FALSE)
+write.csv(bgcs_filt, "./bgcs_metadata.csv", row.names = FALSE)
 
 
 bgc_long <- bgcs_filt %>%
