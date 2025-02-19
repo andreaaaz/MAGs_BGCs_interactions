@@ -5,12 +5,14 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+Workflow of how to identify interaction patterns between ocean microbial phylogenetic groups and biosynthetic gene clusters (BGCs).
+
 ```{r libraries, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(dplyr)
 ```
 
-```{r, load_data}
+```{r load_data}
 setwd(".")
 meta_mags <- read.csv("metadata.csv")
 meta_bgcs <- read.csv("bgcs_metadata.csv")
@@ -21,38 +23,104 @@ meta_bgcs <- meta_bgcs %>%
   filter(Genome %in% meta_mags$Genome)
 ```
 
-Add the locations to the BGCs table based on the MAGs from where they were found And count the number of BGCs per site and GCF (gene cluster families)
-
-```{r count_bgcs}
-bgcs_sites <- meta_bgcs %>%
-  left_join(meta_mags %>% select(Genome, station), by = "Genome")
-
-gcfs <- bgcs_sites %>% 
-  distinct(gcf)
-gcfs_by_sites <- bgcs_sites %>%
-  count(station, gcf) %>%
-  pivot_wider(names_from = gcf, values_from = n, values_fill = 0)
-```
-
-Count the number of MAGs per site and motus
+Count the number of Metagenome Assembled Genomes (MAGs) per site and the microbial phylogenetic group, for this try we will classify groups by mOTUs. Also for group the BGCs we will use the gene cluster families (GCFs).
 
 ```{r count_mags}
-motus <- meta_mags %>% 
-  distinct(mOTUs.Species.Cluster)
+# number of mOTUs
+#motus <- meta_mags %>% 
+#  distinct(mOTUs.Species.Cluster)
+
+# Count the number of MAGs per site and mOTUs
 motus_by_sites <- meta_mags %>%
   count(station, mOTUs.Species.Cluster) %>%
   pivot_wider(names_from = mOTUs.Species.Cluster, values_from = n, values_fill = 0)
 ```
 
-Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,139 x 3,935 tables (20,221,965) tables of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. 
+Add the locations to the BGCs table based on the MAGs from where they were found and count the number of BGCs per site and GCF.
 
-```{r try3}
+```{r count_bgcs}
+# bind the column station to each BGC using the column Genome ass a reference to match it 
+bgcs_sites <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, station), by = "Genome")
 
-# Quitamos "station" de los nombres de las columnas
+# number of GCFs 
+#gcfs <- bgcs_sites %>% 
+#  distinct(gcf)
+
+# count the number of BGCs per site and GCF
+gcfs_by_sites <- bgcs_sites %>%
+  count(station, gcf) %>%
+  pivot_wider(names_from = gcf, values_from = n, values_fill = 0) 
+```
+
+Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. This will help us to identify "co-exclusion" and "co-occurrence" patterns.
+
+```{r try2}
+# lista donde se van a guardar las tablas de patrones
+patterns <- list()
+
+cont <- 1 # para nombrar tablas en la lista
+
+# recorrer ambas tablas para hacer todas las combinaciones posibles
+for (col1 in colnames(motus_by_sites)) {
+  if (col1 == "station") next  # Ignoramos la columna station
+  
+  for (col2 in colnames(gcfs_by_sites)) {
+    if (col2 == "station") next  # Ignoramos la columna station
+
+    # select the station column and the current column for both tables
+    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
+    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
+    
+    # Bind by ¨site"
+    patterns[[cont]] <- full_join(temp1, temp2, by = "station") 
+    names(patterns[[cont]]) <- c("station", col1, col2)
+    
+    
+    cont <- cont + 1
+  }
+}
+
+```
+
+
+```{r try_patterns}
+patterns <- list()
+
+cont <- 1 
+
+for (col1 in colnames(motus_by_sites)) {
+  
+  for (col2 in colnames(gcfs_by_sites)) {
+    if (col2 == "station") next  
+
+    
+    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
+    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
+    
+    temp3 <- full_join(temp1, temp2, by = "station") 
+    
+    #contador para ierarme las primeras 100 y luego se muere para probarlo en las mil, luego lo corro en todos, invetnar, ver si puedo detectar co-exclusion y guardar solo 
+  
+    
+    
+    cont <- cont + 1
+  }
+}
+
+```
+
+
+
+
+#####################################################
+
+```{r try3, eval=FALSE}
+
 motus_cols <- setdiff(colnames(motus_by_sites), "station")
 gcfs_cols <- setdiff(colnames(gcfs_by_sites), "station")
 
-# Generamos todas las combinaciones posibles
+# Generate all the possible combinations
 combinaciones <- map2(
   rep(motus_cols, each = length(gcfs_cols)), 
   rep(gcfs_cols, times = length(motus_cols)),
@@ -63,31 +131,7 @@ combinaciones <- map2(
 )
 ```
 
-```{r try2}
-combinaciones <- list()
-
-cont <- 1
-for (col1 in colnames(motus_by_sites)) {
-  if (col1 == "station") next  # Saltamos la columna "sitio"
-  
-  for (col2 in colnames(gcfs_by_sites)) {
-    if (col2 == "station") next  # Saltamos la columna "sitio"
-
-    # Seleccionamos sitio + la columna de tabla1 y la columna de tabla2
-    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
-    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
-    
-    # Unimos por "sitio"
-    combinaciones[[cont]] <- full_join(temp1, temp2, by = "station")
-    names(combinaciones[[cont]]) <- c("station", col1, col2)
-    
-    cont <- cont + 1
-  }
-}
-
-```
-
-```{r try1}
+```{r try1, eval=FALSE}
 combinaciones <- list()
 
 contador <- 1
@@ -107,14 +151,20 @@ for (col1 in colnames(motus_by_sites)) {
 
 ```
 
-
-```{r check}
-
+```{r check, eval=FALSE}
+# 1138 mOTUs of only 1 MAG representative 
 meta_mags %>%
   group_by(mOTUs.Species.Cluster) %>%                     
   summarise(n = n()) %>%                 
-  filter(n == 1)   
+  filter(n == 1)  
+# 2564 gcfs of only 1 BGC representative 
+bgcs_sites %>%
+  group_by(gcf) %>%                     
+  summarise(n = n()) %>%                 
+  filter(n == 1)  
+
 names(which(table(meta_mags$mOTUs.Species.Cluster) == 1))
+
 
 
 setdiff(motus_by_sites$station, gcfs_by_sites$station)
@@ -122,8 +172,5 @@ setdiff(meta_mags$station, bgcs_sites$station)
 ```
 
 
-
-# Perfect co-exclusion
-To find a perfect co-exclusion pattern we need to see+
 
 
