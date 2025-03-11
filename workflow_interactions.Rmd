@@ -55,13 +55,14 @@ gcfs_by_sites <- bgcs_sites %>%
 
 Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. This will help us to identify "co-exclusion" and "co-occurrence" patterns.
 
-```{r try}
+
+```{r}
 # lista donde se van a guardar las tablas de patrones
-patterns <- list()
+co_occur <- list()
+co_exclu <- list() 
 
-cont <- 1 # para nombrar tablas en la lista
-
-# recorrer ambas tablas para hacer todas las combinaciones posibles
+cont1 <- 1 # para nombrar tablas en la lista
+cont2 <- 1
 for (col1 in colnames(motus_by_sites)) {
   if (col1 == "station") next  # Ignoramos la columna station
   
@@ -72,17 +73,27 @@ for (col1 in colnames(motus_by_sites)) {
     temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
     temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
     
-    # Bind by ¨site"
-    patterns[[cont]] <- full_join(temp1, temp2, by = "station") 
-    names(patterns[[cont]]) <- c("station", col1, col2)
+    temp3 <- full_join(temp1, temp2, by = "station") 
+    temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]]) # NAs creados por el join, hay 
+    temp3[[col2]] <- ifelse(is.na(temp3[[col2]]), 0, temp3[[col2]]) # estaciones que no estan                                                                                 presentes en la lista de los bgcs
     
     
-    cont <- cont + 1
+    if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
+      co_occur[[cont1]] <- c(col1, col2)
+      
+      cont1 <- cont1 + 1
+    }
+    
+    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0) | (temp3[[col1]] == 0 & temp3[[col2]] == 0))) {    # co-exclusion
+      co_exclu[[cont2]] <- c(col1, col2)
+      
+      cont2 <- cont2 + 1
+    }
+
   }
 }
 
 ```
-
 
 
 
