@@ -1,0 +1,60 @@
+---
+title: "try1"
+author: "Andrea Zermeño Díaz"
+date: "`r Sys.Date()`"
+output: html_document
+---
+Example with a co-exclusion and co-occurrence to evaluate the performance of the code
+
+```{r}
+station <- c("site_1", "site_2", "site_3", "site_4", "site_5", "site_6", 
+             "site_7", "site_8", "site_9", "site_10")
+bgc_1 <- c(1, 2, 1, 0, 1, 0, 0, 0, 0, 1)
+bgc_2 <- c(1, 0, 1, 0, 0, 0, 1, 1, 0, 0) # co-occurrence
+bgc_3 <- c(2, 0, 0, 0, 0, 0, 1, 0, 0, 0) # co-exclusion
+
+gcfs_by_sites <- data.frame(station, bgc_1, bgc_2, bgc_3)
+
+mag_1 <- c(2, 0, 1, 0, 0, 0, 3, 1, 0, 0) # co-occurrence 
+mag_2 <- c(1, 3, 0, 0, 0, 1, 0, 0, 0, 1)
+mag_3 <- c(0, 1, 1, 0, 0, 2, 0, 0, 0, 0) # co-exclusion
+
+motus_by_sites <- data.frame(station, mag_1, mag_2, mag_3)
+
+```
+
+
+```{r}
+# lista donde se van a guardar las tablas de patrones
+patterns <- list()
+
+cont <- 1 # para nombrar tablas en la lista
+
+for (col1 in colnames(motus_by_sites)) {
+  if (col1 == "station") next  # Ignoramos la columna station
+  
+  for (col2 in colnames(gcfs_by_sites)) {
+    if (col2 == "station") next  # Ignoramos la columna station
+
+    # select the station column and the current column for both tables
+    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
+    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
+    
+    temp3 <- full_join(temp1, temp2, by = "station") 
+    
+    if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
+      patterns[[cont]] <- temp3# Bind by site
+      names(patterns[[cont]]) <- c("station", col1, col2)
+      
+      cont <- cont + 1
+    }
+  }
+}
+
+```
+
+
+
+
+
+
