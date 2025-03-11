@@ -26,10 +26,11 @@ motus_by_sites <- data.frame(station, mag_1, mag_2, mag_3)
 
 ```{r}
 # lista donde se van a guardar las tablas de patrones
-patterns <- list()
+co_occur <- list()
+co_exclu <- list()
 
-cont <- 1 # para nombrar tablas en la lista
-
+cont1 <- 1 # para nombrar tablas en la lista
+cont2 <- 1
 for (col1 in colnames(motus_by_sites)) {
   if (col1 == "station") next  # Ignoramos la columna station
   
@@ -43,10 +44,14 @@ for (col1 in colnames(motus_by_sites)) {
     temp3 <- full_join(temp1, temp2, by = "station") 
     
     if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
-      patterns[[cont]] <- temp3# Bind by site
-      names(patterns[[cont]]) <- c("station", col1, col2)
+      co_occur[[cont1]] <- c(col1, col2)
       
-      cont <- cont + 1
+      cont1 <- cont1 + 1
+    }
+    
+    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0) | (temp3[[col1]] == 0 & temp3[[col2]] == 0))) {
+      co_exclu[[cont2]] <- c(col1, col2)
+      cont2 <- cont2 + 1
     }
   }
 }
