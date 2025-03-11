@@ -13,7 +13,7 @@ library(dplyr)
 ```
 
 ```{r load_data}
-setwd(".")
+setwd("~/")
 meta_mags <- read.csv("metadata.csv")
 meta_bgcs <- read.csv("bgcs_metadata.csv")
 
@@ -55,7 +55,7 @@ gcfs_by_sites <- bgcs_sites %>%
 
 Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. This will help us to identify "co-exclusion" and "co-occurrence" patterns.
 
-```{r try2}
+```{r try}
 # lista donde se van a guardar las tablas de patrones
 patterns <- list()
 
@@ -75,33 +75,6 @@ for (col1 in colnames(motus_by_sites)) {
     # Bind by ¨site"
     patterns[[cont]] <- full_join(temp1, temp2, by = "station") 
     names(patterns[[cont]]) <- c("station", col1, col2)
-    
-    
-    cont <- cont + 1
-  }
-}
-
-```
-
-
-```{r try_patterns}
-patterns <- list()
-
-cont <- 1 
-
-for (col1 in colnames(motus_by_sites)) {
-  
-  for (col2 in colnames(gcfs_by_sites)) {
-    if (col2 == "station") next  
-
-    
-    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
-    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
-    
-    temp3 <- full_join(temp1, temp2, by = "station") 
-    
-    #contador para ierarme las primeras 100 y luego se muere para probarlo en las mil, luego lo corro en todos, invetnar, ver si puedo detectar co-exclusion y guardar solo 
-  
     
     
     cont <- cont + 1
