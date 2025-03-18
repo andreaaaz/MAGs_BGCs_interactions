@@ -26,8 +26,8 @@ motus_by_sites <- data.frame(station, mag_1, mag_2, mag_3)
 
 ```{r}
 # lista donde se van a guardar las tablas de patrones
-co_occur <- list()
-co_exclu <- list()
+co_occur <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
+co_exclu <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
 
 cont1 <- 1 # para nombrar tablas en la lista
 cont2 <- 1
@@ -49,14 +49,11 @@ for (col1 in colnames(motus_by_sites)) {
     if (nrow(temp3) == 0) next
     
     if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
-      co_occur[[cont1]] <- temp3
-      
-      cont1 <- cont1 + 1
+      co_occur <- rbind(co_occur, data.frame(mags= col1, bgcs= col2, num_stations= nrow(temp3)))
     }
     
-    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0) | (temp3[[col1]] == 0 & temp3[[col2]] == 0))) {    # co-exclusion
-      co_exclu[[cont2]] <- temp3
-      cont2 <- cont2 + 1
+    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))) {    # co-exclusion
+      co_exclu <- rbind(co_exclu, data.frame(mags= col1, bgcs= col2, num_stations= nrow(temp3)))
     }
   }
 }
