@@ -94,6 +94,13 @@ for (col1 in colnames(motus_by_sites)) {
 # graficar donde ocurre un patron en el mapa 
 ```
 
+
+```{r}
+top_10_co_exclu <- co_exclu[order(-co_exclu$num_stations), ][1:10, ]
+print(top_10_co_exclu)
+```
+
+
 ```{r funcition}
 # Definir la función
 recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
@@ -113,8 +120,8 @@ recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
 }
 
 # Ejemplo de uso de la función:
-example <- recreate_table("gom_000200", "gcf_2493", motus_by_sites, gcfs_by_sites)
-
+example <- recreate_table("gom_000200", "gcf_1033", motus_by_sites, gcfs_by_sites)
+print(example)
 
 ```
 
