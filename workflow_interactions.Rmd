@@ -93,6 +93,15 @@ for (col1 in colnames(motus_by_sites)) {
   }
 }
 
+
+print(co_exclu[[1]])
+# funcion que extraiga las columnas y haga el join para observar la tabla
+# agregar la n de estaciones guardarlo
+# borrar 0 antes de los if (ver que no sean piuros 0)
+# bgc que aparezca en muchas co exclusiones 
+# graficar donde ocurre un patron en el mapa 
+# guardarlo en una tabla 
+
 ```
 
 
