@@ -58,8 +58,9 @@ Now we need bind each column of the `gcfs_by_sites` table with each column of th
 
 ```{r}
 # lista donde se van a guardar las tablas de patrones
-co_occur <- list()
-co_exclu <- list() 
+co_occur <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
+
+co_exclu <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
 
 cont1 <- 1 # para nombrar tablas en la lista
 cont2 <- 1
@@ -99,7 +100,6 @@ for (col1 in colnames(motus_by_sites)) {
 print(co_exclu[[1]])
 # funcion que extraiga las columnas y haga el join para observar la tabla
 # agregar la n de estaciones guardarlo
-# borrar 0 antes de los if (ver que no sean piuros 0)
 # bgc que aparezca en muchas co exclusiones 
 # graficar donde ocurre un patron en el mapa 
 # guardarlo en una tabla 
