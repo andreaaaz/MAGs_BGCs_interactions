@@ -44,7 +44,9 @@ for (col1 in colnames(motus_by_sites)) {
     temp3 <- full_join(temp1, temp2, by = "station")
     temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]])
     temp3[[col2]] <- ifelse(is.na(temp3[[col2]]), 0, temp3[[col2]])
+    
     temp3 <- temp3[!(temp3[[col1]] == 0 & temp3[[col2]] == 0), ]
+    if (nrow(temp3) == 0) next
     
     if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
       co_occur[[cont1]] <- temp3
