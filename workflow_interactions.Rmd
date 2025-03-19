@@ -57,10 +57,12 @@ Now we need bind each column of the `gcfs_by_sites` table with each column of th
 
 
 ```{r}
-# lista donde se van a guardar las tablas de patrones
-co_occur <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
+# tablas donde se van a guardar informacion de los patrones
+co_occur <- data.frame(mags = character(), bgcs = character(), total_sites = integer(), 
+                       stringsAsFactors = FALSE)
 
-co_exclu <- data.frame(mags = character(), bgcs = character(), num_stations = integer(), stringsAsFactors = FALSE)
+co_exclu <- data.frame(mags = character(), bgcs = character(), total_sites = integer(), 
+                       mag_sites= integer(), bgc_sites = integer(), stringsAsFactors = FALSE)
 
 for (col1 in colnames(motus_by_sites)) {
   if (col1 == "station") next  # Ignoramos la columna station
@@ -72,24 +74,44 @@ for (col1 in colnames(motus_by_sites)) {
     temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
     temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
     
+    # bind col1 and col2 by station, because some bgcs aren't in all the stations, 
+    # because not all mags have bgcs, so if we do a inner join we will loose information (a possible (1,0)
+    # relevant for us)
     temp3 <- full_join(temp1, temp2, by = "station")
-    temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]])
+    
+    # convertir a 0 los NAs generados por el join
+    temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]]) 
     temp3[[col2]] <- ifelse(is.na(temp3[[col2]]), 0, temp3[[col2]])
     
+    # eliminar sitios en donde no hay ningun mag ni bgc presente (dobles ceros)
     temp3 <- temp3[!(temp3[[col1]] == 0 & temp3[[col2]] == 0), ]
-    if (nrow(temp3) == 0) next
+    if (nrow(temp3) == 0) next 
     
+    # co-ocurrencia
     if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
-      co_occur <- rbind(co_occur, data.frame(mags= col1, bgcs= col2, num_stations= nrow(temp3)))
+      
+      co_occur <- rbind(co_occur, data.frame(mags= col1, bgcs= col2, total_sites= nrow(temp3)))
+      
     }
-    
-    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))) {    # co-exclusion
-      co_exclu <- rbind(co_exclu, data.frame(mags= col1, bgcs= col2, num_stations= nrow(temp3)))
+    # co-exclusion
+    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))) { 
+      
+      mags_sum <- sum(temp3[[col1]] > 0) # cuantos mags estan en los sitios
+      bgcs_sum <- sum(temp3[[col2]] > 0) # vs. cuantos bgcs estan en los sitios
+      
+      co_exclu <- rbind(co_exclu, data.frame(mags= col1, bgcs= col2, total_sites= nrow(temp3), 
+                                             mag_sites = mags_sum, bgc_sites = bgcs_sum ))
     }
   }
 }
 
-# funcion que extraiga las columnas y haga el join para observar la tabla
+
+# cont <- (which(colnames(motus_by_sites) == col1)) * (ncol(gcfs_by_sites)-1) + 
+#  (which(colnames(gcfs_by_sites) == col2))
+
+# write.csv(co_exclu, file = "co_exclussion.csv", row.names = FALSE)
+
+
 # bgc que aparezca en muchas co exclusiones 
 # graficar donde ocurre un patron en el mapa 
 ```
@@ -125,43 +147,18 @@ print(example)
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
 #####################################################
-
-```{r try3, eval=FALSE}
-
-motus_cols <- setdiff(colnames(motus_by_sites), "station")
-gcfs_cols <- setdiff(colnames(gcfs_by_sites), "station")
-
-# Generate all the possible combinations
-combinaciones <- map2(
-  rep(motus_cols, each = length(gcfs_cols)), 
-  rep(gcfs_cols, times = length(motus_cols)),
-  ~ motus_by_sites %>%
-    select(station, .x) %>%
-    full_join(gcfs_by_sites %>% select(station, .y), by = "station") %>%
-    rename_with(~ c("station", .x, .y), everything())
-)
-```
-
-```{r try1, eval=FALSE}
-combinaciones <- list()
-
-contador <- 1
-for (col1 in colnames(motus_by_sites)) {
-  for (col2 in colnames(gcfs_by_sites)) {
-    combinaciones[[contador]] <- data.frame(motus_by_sites[[col1]], gcfs_by_sites[[col2]])
-    names(combinaciones[[contador]]) <- c(col1, col2)
-    contador <- contador + 1
-  }
-}
-
-#
-
-# names(combinaciones) <- paste(rep(colnames(tabla1), each = ncol(tabla2)),
-#                              rep(colnames(tabla2), times = ncol(tabla1)),
-#                              sep = "_")
-
-```
 
 ```{r check, eval=FALSE}
 # 1138 mOTUs of only 1 MAG representative 
