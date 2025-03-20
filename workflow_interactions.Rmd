@@ -106,8 +106,7 @@ for (col1 in colnames(motus_by_sites)) {
 }
 
 
-# cont <- (which(colnames(motus_by_sites) == col1)) * (ncol(gcfs_by_sites)-1) + 
-#  (which(colnames(gcfs_by_sites) == col2))
+cont <- (which(colnames(motus_by_sites) == col1)) * (ncol(gcfs_by_sites)-1) + (which(colnames(gcfs_by_sites) == col2))
 
 # write.csv(co_exclu, file = "co_exclussion.csv", row.names = FALSE)
 
