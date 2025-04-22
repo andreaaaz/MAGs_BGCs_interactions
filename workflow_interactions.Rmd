@@ -10,7 +10,6 @@ Workflow of how to identify interaction patterns between ocean microbial phyloge
 ```{r libraries, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(dplyr)
-library(ggplot2)
 ```
 
 ```{r load_data}
@@ -56,6 +55,32 @@ gcfs_by_sites <- bgcs_sites %>%
 
 Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. This will help us to identify "co-exclusion" and "co-occurrence" patterns.
 
+```{r funcition}
+# Definir la función
+recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
+
+  # select the station column and the current column for both tables
+  table1 <- motus_by_sites[, c("station", mag), drop = FALSE]
+  table2 <- gcfs_by_sites[, c("station", bgc), drop = FALSE]
+  
+  # bind col1 and col2 by station (full_join porque sino se pierden interacciones)
+  table_comb <- full_join(table1, table2, by = "station")
+  
+  # convertir a 0 los NAs generados por el join
+  table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
+  table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
+  
+  # Eliminar filas donde ambos valores sean 0
+  table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
+  
+  return(table_comb)
+}
+
+# Ejemplo de uso de la función:
+example <- recreate_table("gom_000200", "gcf_1033", motus_by_sites, gcfs_by_sites)
+print(example)
+
+```
 
 ```{r}
 # tablas donde se van a guardar informacion de los patrones
@@ -70,22 +95,10 @@ for (col1 in colnames(motus_by_sites)) {
   
   for (col2 in colnames(gcfs_by_sites)) {
     if (col2 == "station") next  # Ignoramos la columna station
+    
+    # Llamar a la función
+    temp3 <- recreate_table(col1, col2, motus_by_sites, gcfs_by_sites)
 
-    # select the station column and the current column for both tables
-    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
-    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
-    
-    # bind col1 and col2 by station, because some bgcs aren't in all the stations, 
-    # because not all mags have bgcs, so if we do a inner join we will loose information (a possible (1,0)
-    # relevant for us)
-    temp3 <- full_join(temp1, temp2, by = "station")
-    
-    # convertir a 0 los NAs generados por el join
-    temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]]) 
-    temp3[[col2]] <- ifelse(is.na(temp3[[col2]]), 0, temp3[[col2]])
-    
-    # eliminar sitios en donde no hay ningun mag ni bgc presente (dobles ceros)
-    temp3 <- temp3[!(temp3[[col1]] == 0 & temp3[[col2]] == 0), ]
     if (nrow(temp3) == 0) next 
     
     # co-ocurrencia
@@ -107,8 +120,6 @@ for (col1 in colnames(motus_by_sites)) {
 }
 
 
-cont <- (which(colnames(motus_by_sites) == col1)) * (ncol(gcfs_by_sites)-1) + (which(colnames(gcfs_by_sites) == col2))
-
 # write.csv(co_exclu, file = "co_exclussion.csv", row.names = FALSE)
 
 
@@ -121,62 +132,6 @@ cont <- (which(colnames(motus_by_sites) == col1)) * (ncol(gcfs_by_sites)-1) + (w
 top_10_co_exclu <- co_exclu[order(-co_exclu$num_stations), ][1:10, ]
 print(top_10_co_exclu)
 ```
-
-
-```{r funcition}
-# Definir la función
-recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
-
-  table1 <- motus_by_sites[, c("station", mag), drop = FALSE]
-  table2 <- gcfs_by_sites[, c("station", bgc), drop = FALSE]
-  
-  table_comb <- full_join(table1, table2, by = "station")
-  
-  table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
-  table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
-  
-  # Eliminar filas donde ambos valores sean 0
-  table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
-  
-  return(table_comb)
-}
-
-# Ejemplo de uso de la función:
-example <- recreate_table("gom_000200", "gcf_1033", motus_by_sites, gcfs_by_sites)
-print(example)
-
-```
-
-```{r graphs}
-ggplot(co_exclu, aes(x = total_sites)) + 
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  scale_x_log10() +
-  labs(title = "Distribución del total de sitios con co-exclusión",
-       x = "Total de sitios", y = "Frecuencia") +
-  theme_minimal()
-
-
-data <- data %>%
-  mutate(total = variable1 + variable2)
-
-# Calcular la frecuencia de cada componente en relación al total
-data_long <- data %>%
-  pivot_longer(cols = c(variable1, variable2), names_to = "variable", values_to = "valor") %>%
-  mutate(frecuencia = valor / total)
-
-# Crear la tabla con colores
-data_long %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  column_spec(3, color = ifelse(data_long$variable == "variable1", "blue", "red"))
-
-```
-
-
-
-
-
-
 
 
 

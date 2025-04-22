@@ -45,6 +45,26 @@ gcfs_by_sites <- bgcs_sites %>%
 
 ############### Workflow ##############################
 
+# Function
+recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
+  
+  # select the station column and the current column for both tables
+  table1 <- motus_by_sites[, c("station", mag), drop = FALSE]
+  table2 <- gcfs_by_sites[, c("station", bgc), drop = FALSE]
+  
+  # bind col1 and col2 by station (full_join porque sino se pierden interacciones)
+  table_comb <- full_join(table1, table2, by = "station")
+  
+  # convertir a 0 los NAs generados por el join
+  table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
+  table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
+  
+  # Eliminar filas donde ambos valores sean 0
+  table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
+  
+  return(table_comb)
+}
+
 # tablas donde se van a guardar informacion de los patrones
 co_occur_list <- list()
 co_exclu_list <- list()
@@ -69,13 +89,9 @@ for (col1 in colnames(motus_by_sites)) {
   for (col2 in colnames(gcfs_by_sites)) {
     if (col2 == "station") next
     
-    temp1 <- motus_by_sites[, c("station", col1), drop = FALSE]
-    temp2 <- gcfs_by_sites[, c("station", col2), drop = FALSE]
+    # llamar a la funcon
+    temp3 <- recreate_table(col1, col2, motus_by_sites, gcfs_by_sites)
     
-    temp3 <- full_join(temp1, temp2, by = "station")
-    temp3[[col1]] <- ifelse(is.na(temp3[[col1]]), 0, temp3[[col1]]) 
-    temp3[[col2]] <- ifelse(is.na(temp3[[col2]]), 0, temp3[[col2]])
-    temp3 <- temp3[!(temp3[[col1]] == 0 & temp3[[col2]] == 0), ]
     if (nrow(temp3) == 0) next 
     
     # co-ocurrencia
