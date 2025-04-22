@@ -1,0 +1,29 @@
+---
+title: "batches"
+author: "Andrea Zermeño Díaz"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r libraries}
+library(tidyverse)
+```
+
+```{r create_batches}
+cols_t <- ncol(motus_by_sites)
+tables <- 10
+columnas_por_tabla <- ceiling(cols_t/ tables)
+
+batch_list <- map(1:tables, ~ {
+  inicio <- (.x - 1) * columnas_por_tabla + 1
+  fin <- min(.x * columnas_por_tabla, cols_t)
+  motus_by_sites[, inicio:fin]
+})
+
+# Guardarlas en archivos CSV
+walk2(batch_list, 1:tables, ~ {
+  write_csv(.x, paste0("subtabla_", .y, ".csv"))
+})
+```
+
+
