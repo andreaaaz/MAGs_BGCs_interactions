@@ -18,7 +18,7 @@ meta_mags <- read.csv("metadata.csv")
 meta_bgcs <- read.csv("bgcs_metadata.csv")
 
 # We are grouping by mOTUS so we need to omit the NAs / For other categories skip this 
-meta_mags <- meta_mags %>% filter(!is.na(mOTUs.Species.Cluster))
+meta_mags <- meta_mags %>% filter(!is.na(mOTUs_Species_Cluster))
 meta_bgcs <- meta_bgcs %>%
   filter(Genome %in% meta_mags$Genome)
 ```
@@ -32,8 +32,8 @@ Count the number of Metagenome Assembled Genomes (MAGs) per site and the microbi
 
 # Count the number of MAGs per site and mOTUs
 motus_by_sites <- meta_mags %>%
-  count(station, mOTUs.Species.Cluster) %>%
-  pivot_wider(names_from = mOTUs.Species.Cluster, values_from = n, values_fill = 0)
+  count(station, mOTUs_Species_Cluster) %>%
+  pivot_wider(names_from = mOTUs_Species_Cluster, values_from = n, values_fill = 0)
 ```
 
 Add the locations to the BGCs table based on the MAGs from where they were found and count the number of BGCs per site and GCF.
@@ -138,7 +138,8 @@ print(top_10_co_exclu)
 
 
 
-#####################################################
+
+
 
 ```{r check, eval=FALSE}
 # 1138 mOTUs of only 1 MAG representative 
