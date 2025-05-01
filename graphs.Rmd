@@ -7,6 +7,9 @@ output: html_document
 
 
 ```{r graphs}
+
+
+
 ggplot(co_exclu, aes(x = total_sites)) + 
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +
   scale_x_log10() +
@@ -15,18 +18,6 @@ ggplot(co_exclu, aes(x = total_sites)) +
   theme_minimal()
 
 
-data <- data %>%
-  mutate(total = variable1 + variable2)
 
-# Calcular la frecuencia de cada componente en relación al total
-data_long <- data %>%
-  pivot_longer(cols = c(variable1, variable2), names_to = "variable", values_to = "valor") %>%
-  mutate(frecuencia = valor / total)
-
-# Crear la tabla con colores
-data_long %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover")) %>%
-  column_spec(3, color = ifelse(data_long$variable == "variable1", "blue", "red"))
 
 ```
