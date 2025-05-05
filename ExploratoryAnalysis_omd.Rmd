@@ -27,7 +27,7 @@ library(rnaturalearthdata)
 
 Archive downloades from 
 ```{r load_data}
-setwd(".")
+setwd("/home/azermeno/")
 # Bins and MAGs accessions from the mag 
 raw_access <- read_excel("41586_2022_4862_MOESM4_ESM.xlsx", 
                          sheet = "Metagenomic Bins and MAGs acces")
@@ -58,9 +58,34 @@ unicos
 # filter
 metadata_filt <- metadata %>%
   semi_join(mags_access, by = c("Genome" = "MAG name"))
-
-write.csv(metadata_filt, "./metadata.csv", row.names = FALSE)
 ```
+
+
+```{r taxons}
+names(metadata_filt) <- gsub(" ", "_", names(metadata_filt))
+# dividir gtdb en taxones
+meta_magsT <- metadata_filt %>%
+  separate(GTDB_Taxonomy,
+           into = c("domain", "phylum", "class", "order", "family", "genus", "species"),
+           sep = ";",
+           fill = "right",
+           remove = FALSE) %>%
+  mutate(across(
+    c(domain, phylum, class, order, family, genus, species),
+    ~ str_remove(., "^[a-z]__")  # elimina prefijos  d__ y asi
+  )) %>%
+  mutate(across(
+    c(domain, phylum, class, order, family, genus, species),
+    ~ na_if(., "")  # conviertir a NA
+  ))
+
+
+write.csv(meta_magsT, "metadata.csv", row.names = FALSE)
+```
+
+
+
+#####################################################
 
 
 
@@ -125,12 +150,7 @@ ggsave("depth_layers.png", plot = depth, width = 34, height = 18, units = "cm")
 
 ```
 
-frequency 
 
-```{r plot_vogage}
-
-
-```
 
 
 
@@ -140,8 +160,12 @@ frequency
 ```{r, warning=FALSE, message=FALSE}
 bgcs <- read_csv("Microbiomics_Website.csv")
 bgcs_filt <- bgcs %>%
-  filter(Genome %in% metadata_filt$Genome)
-write.csv(bgcs_filt, "./bgcs_metadata.csv", row.names = FALSE)
+  filter(Genome %in% meta_magsT$Genome)
+# bind the column station to each BGC using the column Genome ass a reference to match it 
+bgcs_sites <- bgcs_filt %>%
+  left_join(meta_magsT %>% select(Genome, station), by = "Genome")
+
+write.csv(bgcs_sites, "./bgcs_metadata.csv", row.names = FALSE)
 
 
 bgc_long <- bgcs_filt %>%
