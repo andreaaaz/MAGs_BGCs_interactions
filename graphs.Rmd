@@ -5,10 +5,17 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+```{r setup}
+library(ggplot2)
+library(tidyverse)
 
-```{r graphs}
+
+setwd("~/")
+co_exclu <- read.csv("co_exclussion.csv")
+```
 
 
+```{r hist}
 
 ggplot(co_exclu, aes(x = total_sites)) + 
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +
@@ -16,8 +23,31 @@ ggplot(co_exclu, aes(x = total_sites)) +
   labs(title = "Distribución del total de sitios con co-exclusión",
        x = "Total de sitios", y = "Frecuencia") +
   theme_minimal()
+```
+
+```{r filter}
+filt_exclu <- co_exclu %>%
+  filter(total_sites > 30)
 
 
+ggplot(filt_exclu, aes(x = total_sites)) + 
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  scale_x_log10() +
+  labs(title = "Distribución del total de sitios con co-exclusión",
+       x = "Total de sitios", y = "Frecuencia") +
+  theme_minimal()
+
+  
+
+```
+
+```{r scatter_plot}
+ggplot(co_exclu, aes(x = mag_sites, y = bgc_sites)) +
+  geom_point(color = "blue", size = 0.5) +
+  labs(title = "Relación entre sitos con mags y bgcs",
+       x = "Mags",
+       y = "Bgcs") +
+  theme_minimal()
 
 
 ```
