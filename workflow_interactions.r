@@ -5,7 +5,6 @@
 
 # libraries
 library(tidyverse)
-library(dplyr)
 
 ########### Functions #################
 
@@ -24,10 +23,6 @@ prep_mags <- function(meta_mags, mags){
 
 prep_bgcs <- function(meta_bgcs, bgcs, meta_mags){
   bgcs <- enquo(bgcs)
-  # data prep
-  meta_bgcs <- meta_bgcs %>%             # select only the bgcs present
-    filter(Genome %in% meta_mags$Genome) # in the mags selected ???
-  
   # count the number of BGCs per site and GCF
   bgcs_by_sites <- meta_bgcs %>%
     count(station, !!bgcs) %>%
@@ -58,7 +53,7 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
 
 
 # data load
-workdir <- "/mnt/atgc-d3/sur/users/azermeno/data/2025-interactions/"
+workdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/2025-interactions/MAGs_BGCs_interactions/"
 outdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/"
 
 meta_mags <- read.csv(file = paste0(workdir, 'metadata.csv'), header = TRUE)
