@@ -53,7 +53,7 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
 
 
 # data load
-workdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/2025-interactions/MAGs_BGCs_interactions/"
+workdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/"
 outdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/"
 
 meta_mags <- read.csv(file = paste0(workdir, 'metadata.csv'), header = TRUE)
