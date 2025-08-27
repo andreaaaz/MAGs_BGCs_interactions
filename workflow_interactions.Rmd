@@ -13,7 +13,7 @@ library(dplyr)
 ```
 
 ```{r load_data}
-setwd("~/")
+setwd("~/MAGs_BGCs_interactions")
 meta_mags <- read.csv("metadata.csv")
 meta_bgcs <- read.csv("bgcs_metadata.csv")
 
@@ -53,10 +53,10 @@ gcfs_by_sites <- bgcs_sites %>%
   pivot_wider(names_from = gcf, values_from = n, values_fill = 0) 
 ```
 
-Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table, so we can obtain 5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station. This will help us to identify "co-exclusion" and "co-occurrence" patterns.
+Now we need bind each column of the `gcfs_by_sites` table with each column of the `motus_by_sytes` table,  5,138 x 3,934 tables (20,212,892)  of 3 columns (stations, mOTUs and GCFs) and 256 rows dictated by station will be generated. This will help us to identify "co-exclusion" and "co-occurrence" patterns, combinations that dont follow up the patterns will be discarted. 
 
 ```{r funcition}
-# Definir la función
+# function
 recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
 
   # select the station column and the current column for both tables
@@ -66,24 +66,24 @@ recreate_table <- function(mag, bgc, motus_by_sites, gcfs_by_sites) {
   # bind col1 and col2 by station (full_join porque sino se pierden interacciones)
   table_comb <- full_join(table1, table2, by = "station")
   
-  # convertir a 0 los NAs generados por el join
+  # convert NAs to 0 generated in the join
   table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
   table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
   
-  # Eliminar filas donde ambos valores sean 0
+  # eliminate lines were both values are 0
   table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
   
   return(table_comb)
 }
 
-# Ejemplo de uso de la función:
+# Example of use:
 example <- recreate_table("gom_000200", "gcf_1033", motus_by_sites, gcfs_by_sites)
 print(example)
 
 ```
 
 ```{r}
-# tablas donde se van a guardar informacion de los patrones
+# tables to save the interactions
 co_occur <- data.frame(mags = character(), bgcs = character(), total_sites = integer(), 
                        stringsAsFactors = FALSE)
 
@@ -91,28 +91,28 @@ co_exclu <- data.frame(mags = character(), bgcs = character(), total_sites = int
                        mag_sites= integer(), bgc_sites = integer(), stringsAsFactors = FALSE)
 
 for (col1 in colnames(motus_by_sites)) {
-  if (col1 == "station") next  # Ignoramos la columna station
+  if (col1 == "station") next  # Ignoring station column
   
   for (col2 in colnames(gcfs_by_sites)) {
-    if (col2 == "station") next  # Ignoramos la columna station
+    if (col2 == "station") next  
     
-    # Llamar a la función
+    # function calling
     temp3 <- recreate_table(col1, col2, motus_by_sites, gcfs_by_sites)
 
     if (nrow(temp3) == 0) next 
     
-    # co-ocurrencia
-    if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) { # co-ocurrencia
-      
+    # co-occurrence
+    if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) {
+      #add new row
       co_occur <- rbind(co_occur, data.frame(mags= col1, bgcs= col2, total_sites= nrow(temp3)))
       
     }
     # co-exclusion
     if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))) { 
       
-      mags_sum <- sum(temp3[[col1]] > 0) # cuantos mags estan en los sitios
-      bgcs_sum <- sum(temp3[[col2]] > 0) # vs. cuantos bgcs estan en los sitios
-      
+      mags_sum <- sum(temp3[[col1]] > 0) # how many sites have mags
+      bgcs_sum <- sum(temp3[[col2]] > 0) # vs. how many sites have bgcs
+      #add new row
       co_exclu <- rbind(co_exclu, data.frame(mags= col1, bgcs= col2, total_sites= nrow(temp3), 
                                              mag_sites = mags_sum, bgc_sites = bgcs_sum ))
     }
@@ -120,19 +120,39 @@ for (col1 in colnames(motus_by_sites)) {
 }
 
 
-# write.csv(co_exclu, file = "co_exclussion.csv", row.names = FALSE)
+#write.csv(co_exclu, file = "co_exclussion.csv", row.names = FALSE)
+#write.csv(co_occur, file = "co_occurrence.csv", row.names = FALSE)
 
 
-# bgc que aparezca en muchas co exclusiones 
-# graficar donde ocurre un patron en el mapa 
 ```
 
 
-```{r}
+```{r filt, eval=FALSE}
+# para saber las interaccions que ocurren en mas sitios
+
 top_10_co_exclu <- co_exclu[order(-co_exclu$num_stations), ][1:10, ]
 print(top_10_co_exclu)
-```
 
+# para filtrar segun los sitios
+filt_exclu <- co_exclu %>%
+  filter(total_sites > 50)
+filt_ocur <- co_ocur %>%
+  filter(total_sites > 50)
+
+# radio entre sitios con mags y sitios con bgcs para casos de co-exclusion, que esten cerca de 0
+ratio_plot <- filt_exclu %>%
+  mutate(
+    ratio = log2(mag_sites / bgc_sites)  # pseudoconteo para evitar log(0)
+  )
+
+# eliminar casos de co-ocurrencia donde el bgc pertenezca al mismo mag
+meta_bgcs <- meta_bgcs %>%    # agregar columna de motus a meta_bgcs 
+  left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome")
+
+filt_ocur <- filt_ocur %>%  #filtrar
+  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf"))
+
+```
 
 
 

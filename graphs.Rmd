@@ -5,49 +5,134 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup}
+```{r setup, warning=FALSE}
+# libs
 library(ggplot2)
 library(tidyverse)
 
-
-setwd("~/")
+# load data
+setwd("~/2025-interactions")
 co_exclu <- read.csv("co_exclussion.csv")
+co_ocur <- read.csv("co_ocurrence.csv")
 ```
 
 
-```{r hist}
+######### CO-EXCLUSION #############  
 
+```{r hists}
+# histograma de frecuencia de sitios en casos de co-exclusion
 ggplot(co_exclu, aes(x = total_sites)) + 
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  scale_x_log10() +
-  labs(title = "Distribución del total de sitios con co-exclusión",
-       x = "Total de sitios", y = "Frecuencia") +
+  geom_histogram(bins = 80, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of the Number of Sites Where Co-exclusion Events Occur",
+       x = "Number of Sites per Co-exclusion Event", y = "Frequency") +
   theme_minimal()
-```
 
-```{r filter}
+# filtrar los casos que esten presentes en menos de 50 sitios
 filt_exclu <- co_exclu %>%
-  filter(total_sites > 30)
+  filter(total_sites > 50) # 47,000
 
-
+# histograma (zoom in)
 ggplot(filt_exclu, aes(x = total_sites)) + 
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  scale_x_log10() +
-  labs(title = "Distribución del total de sitios con co-exclusión",
-       x = "Total de sitios", y = "Frecuencia") +
+  geom_histogram(bins = 80, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of the Number of Sites Where Co-exclusion Events Occur",
+       x = "Number of Sites per Co-exclusion Event", y = "Frequency") +
   theme_minimal()
 
-  
 
 ```
+
 
 ```{r scatter_plot}
 ggplot(co_exclu, aes(x = mag_sites, y = bgc_sites)) +
   geom_point(color = "blue", size = 0.5) +
-  labs(title = "Relación entre sitos con mags y bgcs",
-       x = "Mags",
-       y = "Bgcs") +
+  labs(title = "Relationship Between Sites with MAGs and BGCs",
+       x = "Number of sites with MAGs",
+       y = "Number of sites with BGCs") +
+  theme_minimal()
+
+co_exclu %>%
+  count(mag_sites, bgc_sites) %>%  
+  ggplot(aes(x = mag_sites, y = bgc_sites, size = n)) +
+  geom_point(color = "blue", alpha = 0.6) +  # alpha para ver mejor si hay solapamientos
+  labs(title = "Relationship Between Sites with MAGs and BGCs",
+       x = "Number of sites with MAGs",
+       y = "Number of sites with BGCs",
+       size = "Frequency") +
+  theme_minimal()
+
+filt_exclu %>%
+  count(mag_sites, bgc_sites) %>%  
+  ggplot(aes(x = mag_sites, y = bgc_sites, size = n)) +
+  geom_point(color = "blue", alpha = 0.6) +  # alpha para ver mejor si hay solapamientos
+  labs(title = "Relación entre sitios con MAGs y BGCs",
+       x = "MAGs",
+       y = "BGCs",
+       size = "Frecuencia") +
   theme_minimal()
 
 
 ```
+
+
+```{r ods_ratio}
+ratio_plot <- filt_exclu %>%
+  mutate(
+    ratio = log2(mag_sites / bgc_sites)  # pseudoconteo para evitar log(0)
+  )
+
+ggplot(ratio_plot_f, aes(x = ratio)) + 
+  geom_histogram(bins = 80, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of the Ratio Between MAG and BGC Site Presence",
+       x = "log₂(MAG sites / BGC sites)", y = "Frecueny of co-exclusion events") +
+  theme_minimal()
+
+ratio_plot_f <- ratio_plot %>%
+  filter(ratio <= 1 & ratio >= -1)
+# transformarlo a logaritmo 
+# establecer umbrales, piensa la distribucion probabliidad de p en n sitios 
+```
+
+
+############ CO-OCURRENCIA ##############
+
+La presencia es mas fuerte que la ausencia, 2-3 que sean interesantes, quitar los bgcs del mismo motu  
+mOTUs mas importantes mas aumenta la probabilidad de que no compparta bgcs
+
+
+```{r}
+filt_ocur <- co_ocur %>%
+  filter(total_sites >= 3)
+ggplot(filt_ocur, aes(x = total_sites)) + 
+  geom_bar(fill = "steelblue", color = "white") +
+  labs(title = "Distribution of the Number of Sites Where Co-occurrence Events Occur",
+       x = "Number of Sites per Co-occurence Event", y = "Frequency") +
+  theme_minimal()
+
+ggplot(filt_ocur_1, aes(x = total_sites)) + 
+  geom_bar(width = 0.1, fill = "steelblue", color = "white") +
+  scale_x_continuous(breaks = c(4, 5)) +
+  labs(title = "Distribución de",
+       x = "Total de sitios", y = "Frecuencia") +
+  theme_minimal()
+
+
+# las que son de +9 los gcf son del mismo grupo
+# filtrar los bgc que pertenecen al mismo mag 
+
+
+```
+
+
+
+```{r filt}
+meta_bgcs <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome")
+
+filt_ocur_1 <- filt_ocur %>% 
+  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf"))
+
+
+
+```
+
+
