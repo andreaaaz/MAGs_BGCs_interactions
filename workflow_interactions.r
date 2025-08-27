@@ -60,7 +60,7 @@ meta_mags <- read.csv(file = paste0(workdir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(workdir, 'bgcs_metadata.csv'), header = TRUE)
 
 
-mags_by_sites <- prep_mags(meta_mags, mOTUs_Species_Cluster)
+mags_by_sites <- prep_mags(meta_mags,  mOTUs_Species_Cluste)
 bgcs_by_sites<- prep_bgcs(meta_bgcs, gcf, meta_mags)
 
 
