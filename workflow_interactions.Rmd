@@ -155,7 +155,26 @@ filt_ocur <- filt_ocur %>%  #filtrar
 ```
 
 
+```{r stats}
+# significance with binomial test 
+# resultados <- co_ocurr %>%
+#   rowwise() %>%
+#   mutate(
+#     test = list(binom.test(success, n_sites, p = 0.5)),  # hipótesis nula p=0.5
+#     p_value = test$p.value,
+#     prop_obs = success / n_sites
+#   ) %>%
+#   ungroup()
 
+# model
+n_sites <- 256
+
+modelo <- glm(cbind(total_sites, n_sites - total_sites) ~ Mags + Bgcs,
+              data = co_ocur,
+              family = binomial)
+summary(modelo)
+
+```
 
 
 
