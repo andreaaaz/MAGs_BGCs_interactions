@@ -160,19 +160,37 @@ filt_ocur <- filt_ocur %>%  #filtrar
 # resultados <- co_ocurr %>%
 #   rowwise() %>%
 #   mutate(
-#     test = list(binom.test(success, n_sites, p = 0.5)),  # hipótesis nula p=0.5
+#     test = list(binom.test(total, n_sites, p = 0.5)),  # hipótesis nula p=0.5
 #     p_value = test$p.value,
 #     prop_obs = success / n_sites
 #   ) %>%
 #   ungroup()
 
 # model
-n_sites <- 256
+# n_sites <- 256
+# 
+# modelo <- glm(cbind(total_sites, n_sites - total_sites) ~ Mags + Bgcs,
+#               data = co_ocur,
+#               family = binomial)
+# summary(modelo)
 
-modelo <- glm(cbind(total_sites, n_sites - total_sites) ~ Mags + Bgcs,
-              data = co_ocur,
-              family = binomial)
-summary(modelo)
+
+
+n_sites <- length(unique(motus_by_sites$station))
+
+stats_exlcu <- co_exclu %>%
+  mutate(
+    p_bgc  = (bgc_sites / n_sites) * (1 - (mag_sites / n_sites)),
+    p_mags = (mag_sites / n_sites) * (1 - (bgc_sites / n_sites))
+  )
+
+stats_ocur <- co_occur %>%
+  mutate(
+    p = (total_sites / n_sites) * (total_sites / n_sites)
+  )
+
+
+
 
 ```
 
