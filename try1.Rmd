@@ -7,21 +7,22 @@ output: html_document
 Example with a co-exclusion and co-occurrence to evaluate the performance of the code
 
 ```{r}
+library(tidyverse)
+
+
 station <- c("site_1", "site_2", "site_3", "site_4", "site_5", "site_6", 
              "site_7", "site_8", "site_9", "site_10")
 bgc_1 <- c(1, 2, 1, 0, 1, 0, 0, 0, 0, 1)
 bgc_2 <- c(1, 0, 1, 0, 0, 0, 1, 1, 0, 0) # co-occurrence
 bgc_3 <- c(2, 0, 0, 0, 0, 0, 1, 0, NA, 0) # co-exclusion
-bgc_4 <- c(0, 0, 1, 0, 1, 0, 1, 0, NA, 0)
 
-gcfs_by_sites <- data.frame(station, bgc_1, bgc_2, bgc_3, bgc_4)
+gcfs_by_sites <- data.frame(station, bgc_1, bgc_2, bgc_3)
 
 mag_1 <- c(2, 0, 1, 0, 0, 0, 3, 1, 0, 0) # co-occurrence 
 mag_2 <- c(1, 3, 0, 0, 0, 1, 0, 0, 0, 1)
 mag_3 <- c(0, 1, 1, 0, 0, 2, NA, 0, 0, 0) # co-exclusion
-mag_4 <- c(2, 1, 0, 0, 0, 2, NA, 0, 1, 0)
 
-motus_by_sites <- data.frame(station, mag_1, mag_2, mag_3, mag_4)
+motus_by_sites <- data.frame(station, mag_1, mag_2, mag_3)
 
 ```
 
@@ -83,25 +84,67 @@ print(co_exclu)
 
 
 ```
+-----------------------------------------------------------------------
 
+##### Probabilities #########
 
-```{r stats}
-n_sites <- length(unique(motus_by_sites$station))
+Obtaining the probability (pi) for each case of co-exclusion/co-occurrence for a binomial test. Observe how it acts with the ratio between MAGs and BGCs.
 
-stats_exlcu <- co_exclu %>%
+```{r}
+# Ejemplo aleatorio de como se veria el dataset
+Dat <- tibble(
+  total = 256,
+  coex = rpois(n = 100, lambda = 15), 
+  mags = sample(letters[1:4], size = 100, replace = TRUE),
+  bgcs = sample(LETTERS[1:4], size = 100, replace = TRUE)) %>%
+  rowwise() %>%
   mutate(
-    p_bgc  = (bgc_sites / n_sites) * (1 - (mag_sites / n_sites)),
-    p_mags = (mag_sites / n_sites) * (1 - (bgc_sites / n_sites))
+    mag_sites = sample(0:coex, 1),
+    bgc_sites = coex - mag_sites) %>%
+  ungroup()
+
+
+Dat_stats<- Dat %>%
+  mutate(
+    p = bgc_sites/total, #P(bgc)
+    q = mag_sites/total, #P(mag)
+    pi  = ((p) * (1 - (q))) + ((q) * (1 - (p))) # P(mag=1,bgc=0) + P(mag=0, bgc=1)
+  )                                             # = p - (2*p*q) + q
+
+ggplot(Dat_stats, aes(x = p, y = q, fill = pi)) +
+  geom_tile() +                  
+  scale_fill_viridis_c() +      
+  labs(x = "p", y = "q", fill = "pi") +
+  theme_minimal()
+#------------------------------------------------------------------
+# Mejor simulamos para diferentes combinacion de probabilidades de p y q
+
+p <- seq(0.01, 1, length.out = 100) 
+q <- seq(0.01, 1, length.out = 100)
+
+Dat2 <- expand.grid(p = p, q = q) %>% # combinaciones
+  as_tibble() %>%
+  mutate(
+    pi_e = ((p) * (1 - (q))) + ((q) * (1-(p))), # = p - (2*p*q) + q
+    pi_o = p * q
   )
 
-stats_ocur <- co_occur %>%
-  mutate(
-    p = (total_sites / n_sites) * (total_sites / n_sites)
-  )
+ggplot(Dat2, aes(x = p, y = q, fill = pi_e)) +
+  geom_tile() +                  
+  scale_fill_viridis_c() +      
+  labs(x = "p", y = "q", fill = "pi") +
+  theme_minimal()
 
+ggplot(Dat2, aes(x = p, y = q, fill = pi_o)) +
+  geom_tile() +                  
+  scale_fill_viridis_c() +      
+  labs(x = "p", y = "q", fill = "pi") +
+  theme_minimal()
 ```
+El radio ente mags y bgcs: la probabilidad pi de que esten en co-exclusion magi y bgcj es menos probable cuando la prbabilidad de que el magi y de que el bgcj este en n sitios sea la misma.Tambien es mas probablie que pase si hay un desbalance.
 
+Porbabilidad de co-ocurrencia: la porbabilidad pi de que esten en co_ocurrencia magi y bgcj es mas baja cuando la probabilidad de que ambos esten presentes sea baja, lo mismo si hay un desbalance. 
+-------------------------------------------------------------------------
 
-
-
+##### Binomial test ######
 

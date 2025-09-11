@@ -12,6 +12,7 @@ library(tidyverse)
 library(dplyr)
 ```
 
+***Metadata was prepared in ExploratoryAnalyisis_omd.Rmd***
 ```{r load_data}
 setwd("~/MAGs_BGCs_interactions")
 meta_mags <- read.csv("metadata.csv")
@@ -82,6 +83,8 @@ print(example)
 
 ```
 
+***Checking the code with an example in try.Rmd***
+
 ```{r}
 # tables to save the interactions
 co_occur <- data.frame(mags = character(), bgcs = character(), total_sites = integer(), 
@@ -125,11 +128,15 @@ for (col1 in colnames(motus_by_sites)) {
 
 
 ```
+***The final code is in workflow_interactions.r***
 
+10⁸ patrones de co-exclusion perfectos fueron encontrados. 
+10⁵ patrones de co-ocurrencia perfectos fueron encotrados.
 
+Muchos patrones ocurren solo en pocos sitios, lo cual no es tan interesante.
+***Ir a graphs.Rmd para ver sus distribuciones y otras cosas***
 ```{r filt, eval=FALSE}
 # para saber las interaccions que ocurren en mas sitios
-
 top_10_co_exclu <- co_exclu[order(-co_exclu$num_stations), ][1:10, ]
 print(top_10_co_exclu)
 
@@ -154,15 +161,19 @@ filt_ocur <- filt_ocur %>%  #filtrar
 
 ```
 
+#---------------------------------------
+#          PROBABILITIES
+#---------------------------------------
+We need to calculate de probability of each case so we can 
 
-```{r stats}
+***Exploring this in try1.Rmd***
+```{r probs}
 # significance with binomial test 
-# resultados <- co_ocurr %>%
+# res<- co_ocurr %>%
 #   rowwise() %>%
 #   mutate(
 #     test = list(binom.test(total, n_sites, p = 0.5)),  # hipótesis nula p=0.5
-#     p_value = test$p.value,
-#     prop_obs = success / n_sites
+#     p_value = test$p.value
 #   ) %>%
 #   ungroup()
 
@@ -174,29 +185,46 @@ filt_ocur <- filt_ocur %>%  #filtrar
 #               family = binomial)
 # summary(modelo)
 
+n_sites <- length(unique(motus_by_sites$station)) # numero total de sitios
 
-
-n_sites <- length(unique(motus_by_sites$station))
-
-stats_exlcu <- co_exclu %>%
+# probabilidad de que ocurra una co-exclusion
+prob_exlcu <- co_exclu %>%
   mutate(
-    p_bgc  = (bgc_sites / n_sites) * (1 - (mag_sites / n_sites)),
-    p_mags = (mag_sites / n_sites) * (1 - (bgc_sites / n_sites))
+    # P(mag = 1)
+    q = mag_sites/n_sites,
+    # P(bgc = 1)
+    p = bgc_sites/n_sites,
+    # pi = P(mag = 1, bgc = 0) + P(mag = 0, bgc = 1) = (p)*(1-q) + (q)*(1-p) = p-(2*p*q)+q
+    pi = p - (2*p*q) + q ,
   )
 
+# probabilidad de que ocurra una co-ocurrencia
 stats_ocur <- co_occur %>%
   mutate(
-    p = (total_sites / n_sites) * (total_sites / n_sites)
+    # P(mag = 1)
+    q = mag_sites/n_sites,
+    # P(bgc = 1)
+    p = bgc_sites/n_sites,
+    # pi = P(mag = 1, bgc = 1) = p * q    
+    pi = p * q    # p = q si es co-ocurrencia perfecta 
   )
 
 
+```
 
+#----------------------------------------
+#            BINOMIAL TEST
+#----------------------------------------
+Now that we have the probabilities we can calculates de p-value with a binomial test to see if the case is significant
+```{r binom}
 
 ```
 
 
 
 
+#---------------------------------------------------------------------------
+this part is only to check the distribution of groups
 
 ```{r check, eval=FALSE}
 # 1138 mOTUs of only 1 MAG representative 
