@@ -128,11 +128,12 @@ ggplot(filt_ocur_1, aes(x = total_sites)) +
 meta_bgcs <- meta_bgcs %>%
   left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome")
 
-filt_ocur_1 <- filt_ocur %>% 
-  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf"))
-
-
+filt_ocur <- co_ocur %>% 
+  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf")) %>%
+  filter(total_sites >= 3)
 
 ```
+
+
 
 
