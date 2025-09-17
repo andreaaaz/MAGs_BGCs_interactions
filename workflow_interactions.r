@@ -68,9 +68,8 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, gcf, meta_mags)
 ############### Workflow ##############################
 
 # tablas donde se van a guardar informacion de los patrones
-co_occur_list <- list()
-co_exclu_list <- list()
-
+cases_list <- list()
+#para imprimir avance
 counter <- 0
 start_time <- Sys.time()
 
@@ -88,42 +87,43 @@ for (col1 in colnames(mags_by_sites)) {
     
   }
   
-  for (col2 in colnames(bgcs_by_sites)) {
+  for (col2 in colnames(bgcs_by_sites)) { 
     if (col2 == "station") next
     
-    # llamar a la funcon
+    # create table of magi and bgcj
     temp3 <- recreate_table(col1, col2, mags_by_sites, bgcs_by_sites)
     
     if (nrow(temp3) == 0) next 
     
-    # co-ocurrencia
-    if (all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))) {
-      co_occur_list[[length(co_occur_list) + 1]] <- list(
-        Mags = col1, 
-        Bgcs = col2, 
-        total_sites = nrow(temp3)
-      )
-    }
+    # BUG
+    if (sum(temp3[col1]) < 5 | sum(temp3[col2]) < 5 ) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
     
-    # co-exclusión
-    if (all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))) {
-      co_exclu_list[[length(co_exclu_list) + 1]] <- list(
-        Mags = col1, 
-        Bgcs = col2, 
-        total_sites = nrow(temp3), 
-        mag_sites = sum(temp3[[col1]] > 0), 
-        bgc_sites = sum(temp3[[col2]] > 0)
+    # guardar todas las combinaciones de magi y bgcj y datos adiccionales
+    cases_list[[length(cases_list) + 1]] <- list(
+      # names  
+      Mags = col1, 
+      Bgcs = col2,
+      # sites of mags and bgcs  
+      mag_sites = sum(temp3[[col1]] > 0), 
+      bgc_sites = sum(temp3[[col2]] > 0),
+      # patterns 
+      # BUG
+      oc_sites = sum(all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))),
+      ex_sites = sum(all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))),
+      # probs
+      q = mag_sites/total_sites,
+      p = bgc_sites/total_sites,
+      pi_e = p - 2*p*q + q,
+      pi_o = p * q
       )
-    }
   }
 }
 
 # Convertir listas a data frames
-co_occur <- bind_rows(co_occur_list)
-co_exclu <- bind_rows(co_exclu_list)
-
+cases <- bind_rows(cases_list)
 
 
 # Save the produced tables
-write.csv(co_exclu, file = paste0(outdir, 'co_exclussion.csv'), row.names = FALSE)
-write.csv(co_occur, file = paste0(outdir, 'co_ocurrence.csv'), row.names = FALSE)
+write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
+
+binom.
