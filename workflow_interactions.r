@@ -102,6 +102,9 @@ for (col1 in colnames(mags_by_sites)) {
     
     q <- mag_sites / total_sites
     p <- bgc_sites / total_sites
+    ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
+                     (temp3[[col1]] > 0 & temp3[[col2]] == 0))
+    oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
     
     # guardar todas las combinaciones de magi y bgcj y datos adiccionales
     cases_list[[length(cases_list) + 1]] <- list(
@@ -112,14 +115,16 @@ for (col1 in colnames(mags_by_sites)) {
       mags_sites = mag_sites, 
       bgcs_sites = bgc_sites,
       # patterns 
-      ex_sites = sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
-                       (temp3[[col1]] > 0 & temp3[[col2]] == 0)),
-      oc_sites = sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0)), # co-occurrence
+      ex_sites = ex_sites,
+      oc_sites = oc_sites,
       # probs
       q = q,
       p = p,
       pi_e = p - 2*p*q + q,
-      pi_o = p * q
+      pi_o = p * q,
+      # p-values
+      pvalue_e = 1-pbinom(ex_sites, total_sites, pi_e),
+      pvalue_o = 1-pbinom(oc_sites, total_sites, pi_o)
       )
   }
 }
@@ -132,28 +137,4 @@ cases <- bind_rows(cases_list)
 write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
 
 
-#### BINOMIAL TEST #####
-res_ex <- cases %>%
-    rowwise() %>%
-    mutate(            #(x      , n           , p)
-      pvalue = 1-pbinom(ex_sites, total_sites, pi_e)
-    # pvalue = sum(dbinom(ex_sites:total_sites, size = total_sites, prob = pi_e))
-    
-    
-    #  pvalue = sum(
-    #    choose(total_sites, k) * pi_o^k * (1 - pi_o)^(total_sites - k)
-    #    for (k in oc_sites:total_sites)
-    #  )
-    
-    
-    ) %>%
-    ungroup()
-
-res_oc <- cases %>%
-  rowwise() %>%
-  mutate(
-    pvalue = 1-pbinom(oc_sites, total_sites, pi_o)
-  # pvalue = sum(dbinom(oc_sites:total_sites, size = total_sites, prob = pi_o))  
-  ) %>%
-  ungroup()
 
