@@ -130,4 +130,3 @@ cases <- bind_rows(cases_list)
 # Save the produced tables
 write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
 
-binom.
