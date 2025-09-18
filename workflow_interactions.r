@@ -67,8 +67,9 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, gcf, meta_mags)
 
 ############### Workflow ##############################
 
-# tablas donde se van a guardar informacion de los patrones
+# tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
+total_sites <- length(unique(mags_by_sites$station))
 #para imprimir avance
 counter <- 0
 start_time <- Sys.time()
@@ -95,8 +96,11 @@ for (col1 in colnames(mags_by_sites)) {
     
     if (nrow(temp3) == 0) next 
     
-    # BUG
-    if (sum(temp3[col1]) < 5 | sum(temp3[col2]) < 5 ) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    mag_sites <- sum(temp3[[col1]] > 0) 
+    bgc_sites <- sum(temp3[[col2]] > 0)
+    if (mag_sites < 2 || bgc_sites < 2) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    q <- mag_sites / total_sites
+    p <- bgc_sites / total_sites
     
     # guardar todas las combinaciones de magi y bgcj y datos adiccionales
     cases_list[[length(cases_list) + 1]] <- list(
@@ -104,15 +108,15 @@ for (col1 in colnames(mags_by_sites)) {
       Mags = col1, 
       Bgcs = col2,
       # sites of mags and bgcs  
-      mag_sites = sum(temp3[[col1]] > 0), 
-      bgc_sites = sum(temp3[[col2]] > 0),
+      mags_sites = mag_sites, 
+      bgcs_sites = bgc_sites,
       # patterns 
-      # BUG
-      oc_sites = sum(all((temp3[[col1]] == 0 & temp3[[col2]] > 0) | (temp3[[col1]] > 0 & temp3[[col2]] == 0))),
-      ex_sites = sum(all((temp3[[col1]] > 0) == (temp3[[col2]] > 0))),
+      ex_sites = sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |
+                       (temp3[[col1]] > 0 & temp3[[col2]] == 0)),
+      oc_sites = sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0)),
       # probs
-      q = mag_sites/total_sites,
-      p = bgc_sites/total_sites,
+      q = q,
+      p = p,
       pi_e = p - 2*p*q + q,
       pi_o = p * q
       )
