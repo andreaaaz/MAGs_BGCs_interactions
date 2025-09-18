@@ -60,7 +60,7 @@ meta_mags <- read.csv(file = paste0(workdir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(workdir, 'bgcs_metadata.csv'), header = TRUE)
 
 
-mags_by_sites <- prep_mags(meta_mags, mOTUs_Species_Cluste)
+mags_by_sites <- prep_mags(meta_mags, mOTUs_Species_Cluster)
 bgcs_by_sites<- prep_bgcs(meta_bgcs, gcf, meta_mags)
 
 
@@ -98,7 +98,7 @@ for (col1 in colnames(mags_by_sites)) {
     
     mag_sites <- sum(temp3[[col1]] > 0) 
     bgc_sites <- sum(temp3[[col2]] > 0)
-    if (mag_sites < 2 || bgc_sites < 2) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    if (mag_sites < 3 || bgc_sites < 3) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
     
     q <- mag_sites / total_sites
     p <- bgc_sites / total_sites
@@ -135,15 +135,25 @@ write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
 #### BINOMIAL TEST #####
 res_ex <- cases %>%
     rowwise() %>%
-    mutate(
+    mutate(            #(x      , n           , p)
       pvalue = 1-pbinom(ex_sites, total_sites, pi_e)
+    # pvalue = sum(dbinom(ex_sites:total_sites, size = total_sites, prob = pi_e))
+    
+    
+    #  pvalue = sum(
+    #    choose(total_sites, k) * pi_o^k * (1 - pi_o)^(total_sites - k)
+    #    for (k in oc_sites:total_sites)
+    #  )
+    
+    
     ) %>%
     ungroup()
 
 res_oc <- cases %>%
   rowwise() %>%
   mutate(
-    test = 1-pbinom(oc_sites, total_sites, pi_o)
+    pvalue = 1-pbinom(oc_sites, total_sites, pi_o)
+  # pvalue = sum(dbinom(oc_sites:total_sites, size = total_sites, prob = pi_o))  
   ) %>%
   ungroup()
 
