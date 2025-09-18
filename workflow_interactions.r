@@ -99,6 +99,7 @@ for (col1 in colnames(mags_by_sites)) {
     mag_sites <- sum(temp3[[col1]] > 0) 
     bgc_sites <- sum(temp3[[col2]] > 0)
     if (mag_sites < 2 || bgc_sites < 2) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    
     q <- mag_sites / total_sites
     p <- bgc_sites / total_sites
     
@@ -111,9 +112,9 @@ for (col1 in colnames(mags_by_sites)) {
       mags_sites = mag_sites, 
       bgcs_sites = bgc_sites,
       # patterns 
-      ex_sites = sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |
+      ex_sites = sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
                        (temp3[[col1]] > 0 & temp3[[col2]] == 0)),
-      oc_sites = sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0)),
+      oc_sites = sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0)), # co-occurrence
       # probs
       q = q,
       p = p,
@@ -129,4 +130,20 @@ cases <- bind_rows(cases_list)
 
 # Save the produced tables
 write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
+
+
+#### BINOMIAL TEST #####
+res_ex <- cases %>%
+    rowwise() %>%
+    mutate(
+      pvalue = 1-pbinom(ex_sites, total_sites, pi_e)
+    ) %>%
+    ungroup()
+
+res_oc <- cases %>%
+  rowwise() %>%
+  mutate(
+    test = 1-pbinom(oc_sites, total_sites, pi_o)
+  ) %>%
+  ungroup()
 
