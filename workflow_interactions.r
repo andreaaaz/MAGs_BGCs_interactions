@@ -23,6 +23,7 @@ prep_mags <- function(meta_mags, mags){
 
 prep_bgcs <- function(meta_bgcs, bgcs, meta_mags){
   bgcs <- enquo(bgcs)
+  
   # count the number of BGCs per site and GCF
   bgcs_by_sites <- meta_bgcs %>%
     count(station, !!bgcs) %>%
@@ -102,6 +103,8 @@ for (col1 in colnames(mags_by_sites)) {
     
     q <- mag_sites / total_sites
     p <- bgc_sites / total_sites
+    pi_e <- p - 2*p*q + q
+    pi_o <- p * q
     ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
                      (temp3[[col1]] > 0 & temp3[[col2]] == 0))
     oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
@@ -120,8 +123,8 @@ for (col1 in colnames(mags_by_sites)) {
       # probs
       q = q,
       p = p,
-      pi_e = p - 2*p*q + q,
-      pi_o = p * q,
+      pi_exclusion = pi_e,
+      pi_occurrence = pi_o,
       # p-values
       pvalue_e = 1-pbinom(ex_sites, total_sites, pi_e),
       pvalue_o = 1-pbinom(oc_sites, total_sites, pi_o)
@@ -131,6 +134,16 @@ for (col1 in colnames(mags_by_sites)) {
 
 # Convertir listas a data frames
 cases <- bind_rows(cases_list)
+
+# filtrar las interacciones donde el bgc esta en ese genoma, no nos interesan 
+meta_bgcs <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome") #agregamos motus a la columna
+
+cases <- cases %>% 
+  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf")) %>%
+  filter(total_sites >= 3)
+
+
 
 
 # Save the produced tables
