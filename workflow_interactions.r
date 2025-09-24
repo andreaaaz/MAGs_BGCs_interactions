@@ -4,7 +4,7 @@
 # marzo-2025 ###################################
 
 # libraries
-library(tidyverse)
+suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
 
 ########### Functions #################
@@ -49,7 +49,7 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
   
   # filt rows were both are 0
   table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
-
+  
   return(table_comb)
 }
 
@@ -123,7 +123,7 @@ for (col1 in colnames(mags_by_sites)) {
     pi_e <- p - 2*p*q + q
     pi_o <- p * q
     ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
-                     (temp3[[col1]] > 0 & temp3[[col2]] == 0))
+                      (temp3[[col1]] > 0 & temp3[[col2]] == 0))
     oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
     
     # save all the combinations of MAGi and BGCj and other data
@@ -145,12 +145,14 @@ for (col1 in colnames(mags_by_sites)) {
       # p-values
       pvalue_e = 1-pbinom(ex_sites, total_sites, pi_e),
       pvalue_o = 1-pbinom(oc_sites, total_sites, pi_o)
-      )
+    )
   }
 }
 
 # list to data frame
+message("\n- Preparing output, please wait")
 cases <- bind_rows(cases_list)
+num_cases <- length(cases$Mags)
 
 # filter interactions where the BGC is in the Genome
 meta_bgcs <- meta_bgcs %>%
@@ -158,11 +160,13 @@ meta_bgcs <- meta_bgcs %>%
 
 cases <- cases %>% 
   anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
+filt_cases <- length(cases$Mags) - num_cases
 
+
+message("\n- NOTE:",filt_cases, "\n- cases where the BGC is in the genome were discarded")
 
 
 # Save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
-
-
+message("\n- Output saved")
