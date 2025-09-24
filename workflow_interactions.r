@@ -5,11 +5,12 @@
 
 # libraries
 library(tidyverse)
+library(optparse)
 
 ########### Functions #################
 
 prep_mags <- function(meta_mags, mags){
-  mags <- enquo(mags)
+  mags <- sym(mags)
   # data prep
   meta_mags <- meta_mags %>% filter(!is.na(!!mags)) # omit NAs
   
@@ -21,8 +22,8 @@ prep_mags <- function(meta_mags, mags){
   return(mags_by_sites)
 }
 
-prep_bgcs <- function(meta_bgcs, bgcs, meta_mags){
-  bgcs <- enquo(bgcs)
+prep_bgcs <- function(meta_bgcs, bgcs){
+  bgcs <- sym(bgcs)
   
   # count the number of BGCs per site and GCF
   bgcs_by_sites <- meta_bgcs %>%
@@ -46,24 +47,40 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
   table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
   table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
   
-  # Eliminar filas donde ambos valores sean 0
+  # filt rows were both are 0
   table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
 
   return(table_comb)
 }
 
 
-# data load
-workdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/"
-outdir <- "/mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/"
+#### DATA LOAD ####
 
-meta_mags <- read.csv(file = paste0(workdir, 'metadata.csv'), header = TRUE)
-meta_bgcs <- read.csv(file = paste0(workdir, 'bgcs_metadata.csv'), header = TRUE)
+# Args
+option_list <- list(
+  make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
+  make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
+  make_option(c("-s", "--minimum_sites"), type="numeric", default=5, help="Minimum number of sites where a group is present"),
+  make_option(c("-i", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory")
+)
+opt <- parse_args(OptionParser(option_list=option_list))
+
+mag_lineage <- opt$microbial_lineage
+bgc_group <- opt$bgc_groups
+min_sites <- opt$minimum_sites
+
+# Run script
+# Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
+# -o /mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/
+
+meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
+meta_bgcs <- read.csv(file = paste0(opt$workdir, 'bgcs_metadata.csv'), header = TRUE)
 
 
-mags_by_sites <- prep_mags(meta_mags, mOTUs_Species_Cluster)
-bgcs_by_sites<- prep_bgcs(meta_bgcs, gcf, meta_mags)
-
+# Count how many microbial lineages and BGC groups are per site
+mags_by_sites <- prep_mags(meta_mags, mag_lineage)
+bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
 
 ############### Workflow ##############################
@@ -99,7 +116,7 @@ for (col1 in colnames(mags_by_sites)) {
     
     mag_sites <- sum(temp3[[col1]] > 0) 
     bgc_sites <- sum(temp3[[col2]] > 0)
-    if (mag_sites < 3 || bgc_sites < 3) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    if (mag_sites < min_sites || bgc_sites < min_sites) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
     
     q <- mag_sites / total_sites
     p <- bgc_sites / total_sites
@@ -109,7 +126,7 @@ for (col1 in colnames(mags_by_sites)) {
                      (temp3[[col1]] > 0 & temp3[[col2]] == 0))
     oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
     
-    # guardar todas las combinaciones de magi y bgcj y datos adiccionales
+    # save all the combinations of MAGi and BGCj and other data
     cases_list[[length(cases_list) + 1]] <- list(
       # names  
       Mags = col1, 
@@ -132,22 +149,20 @@ for (col1 in colnames(mags_by_sites)) {
   }
 }
 
-# Convertir listas a data frames
+# list to data frame
 cases <- bind_rows(cases_list)
 
-# filtrar las interacciones donde el bgc esta en ese genoma, no nos interesan 
+# filter interactions where the BGC is in the Genome
 meta_bgcs <- meta_bgcs %>%
-  left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome") #agregamos motus a la columna
+  left_join(meta_mags %>% select(Genome, all_of(mag_lineage)), by = "Genome") # add lineage to bgc table by genome
 
 cases <- cases %>% 
-  anti_join(meta_bgcs, by = c("Mags" = "mOTUs_Species_Cluster", "Bgcs" = "gcf")) %>%
-  filter(total_sites >= 3)
-
+  anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
 
 
 
 # Save the produced tables
-write.csv(cases, file = paste0(outdir, 'all_cases.csv'), row.names = FALSE)
+write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
 
 
