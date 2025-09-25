@@ -160,7 +160,7 @@ meta_bgcs <- meta_bgcs %>%
 
 cases <- cases %>% 
   anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
-filt_cases <- length(cases$Mags) - num_cases
+filt_cases <- num_cases - length(cases$Mags)
 
 
 message("\n- NOTE:",filt_cases, "\n- cases where the BGC is in the genome were discarded")
@@ -170,3 +170,21 @@ message("\n- NOTE:",filt_cases, "\n- cases where the BGC is in the genome were d
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
 message("\n- Output saved")
+
+
+
+
+###### MUTLIPLE TESTING CORRECTION ##############
+
+cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
+
+cases <- cases %>%
+  mutate(fdr_pval_e = p.adjust(cases$pvalue_e, method = "BH"),
+         fdr_pval_o = p.adjust(cases$pvalue_o, method = "BH"),
+         fwer_pval_e = p.adjust(cases$pvalue_e, method = "bonferroni"), 
+         fwer_pval_o = p.adjust(cases$pvalue_o, method = "bonferroni")) 
+# 
+
+
+
+
