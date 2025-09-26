@@ -12,7 +12,10 @@ library(optparse)
 prep_mags <- function(meta_mags, mags){
   mags <- sym(mags)
   # data prep
+  num_meta <- nrow(meta_mags)
   meta_mags <- meta_mags %>% filter(!is.na(!!mags)) # omit NAs
+  fil_meta <- num_meta - nrow(meta_mags)
+  message("\n NOTE:", fil_meta, "MAGs were discarded due to missing microbial lienage classification")
   
   # Count the number of MAGs per site and phylogenetic groups
   mags_by_sites <- meta_mags %>%
@@ -73,6 +76,7 @@ min_sites <- opt$minimum_sites
 # Run script
 # Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
 # -o /mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/
+message("\n Preparing input, please wait ...")
 
 meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$workdir, 'bgcs_metadata.csv'), header = TRUE)
@@ -148,11 +152,13 @@ for (col1 in colnames(mags_by_sites)) {
     )
   }
 }
+message("\n DONE :)")
+
 
 # list to data frame
-message("\n- Preparing output, please wait")
+message("\n Preparing output, please wait ...")
 cases <- bind_rows(cases_list)
-num_cases <- length(cases$Mags)
+num_cases <- nrow(cases)
 
 # filter interactions where the BGC is in the Genome
 meta_bgcs <- meta_bgcs %>%
@@ -160,30 +166,51 @@ meta_bgcs <- meta_bgcs %>%
 
 cases <- cases %>% 
   anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
-filt_cases <- num_cases - length(cases$Mags)
+filt_cases <- num_cases - nrow(cases)
 
 
-message("\n- NOTE:",filt_cases, "\n- cases where the BGC is in the genome were discarded")
+message("\n NOTE:",filt_cases, " cases where the BGC is in the genome were discarded")
 
 
 # Save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
-message("\n- Output saved")
+message("\n Output saved")
 
 
 
 
 ###### MUTLIPLE TESTING CORRECTION ##############
 
-cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
-
-cases <- cases %>%
-  mutate(fdr_pval_e = p.adjust(cases$pvalue_e, method = "BH"),
-         fdr_pval_o = p.adjust(cases$pvalue_o, method = "BH"),
-         fwer_pval_e = p.adjust(cases$pvalue_e, method = "bonferroni"), 
-         fwer_pval_o = p.adjust(cases$pvalue_o, method = "bonferroni")) 
+# cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
 # 
+# cases <- cases %>%
+#   mutate(fdr_pval_e = p.adjust(cases$pvalue_e, method = "BH"),
+#          fdr_pval_o = p.adjust(cases$pvalue_o, method = "BH"),
+#          fwer_pval_e = p.adjust(cases$pvalue_e, method = "bonferroni"), 
+#          fwer_pval_o = p.adjust(cases$pvalue_o, method = "bonferroni")) 
+# 
+### poner un umbral mas pequeño, como 10 
+### histogrma de ovalues 
+
+#reducir el numero de sitios y compara ciones 
+
+# armonic mean p-valuee (concepto)
+# agrupar p-values
+# prede ir cosa que se puede hacer
+# mapa: instalar terra 
+
+# example <- recreate_table("meta_mOTU_v25_12843", "gcf_871", mags_by_sites, bgcs_by_sites)
+# 
+# 
+# mOTU12843 <- meta_bgcs %>%
+#   filter(gcf == "gcf_871")
+# 
+# 
+# mOTU12843 <- meta_mags %>%
+#   filter(mOTUs_Species_Cluster == "meta_mOTU_v25_12843")
+
+######  PLOTING SITES  ##
 
 
 
