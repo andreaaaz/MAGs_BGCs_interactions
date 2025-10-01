@@ -16,7 +16,7 @@ prep_mags <- function(meta_mags, mags){
   num_meta <- nrow(meta_mags)
   meta_mags <- meta_mags %>% filter(!is.na(!!mags)) # omit NAs
   fil_meta <- num_meta - nrow(meta_mags)
-  message("\n NOTE:", fil_meta, " MAGs were discarded due to missing microbial lienage classification")
+  message("\n NOTE:", fil_meta, " MAGs were discarded due to missing ", mag_lineage," classification")
   
   # Count the number of MAGs per site and phylogenetic groups
   mags_by_sites <- meta_mags %>%
