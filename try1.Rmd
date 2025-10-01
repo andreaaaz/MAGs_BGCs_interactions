@@ -148,3 +148,8 @@ Porbabilidad de co-ocurrencia: la porbabilidad pi de que esten en co_ocurrencia 
 
 ##### Binomial test ######
 
+
+
+
+
+

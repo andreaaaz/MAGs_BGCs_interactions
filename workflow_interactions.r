@@ -6,6 +6,7 @@
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
+library(ggplot2)
 
 ########### Functions #################
 
@@ -15,7 +16,7 @@ prep_mags <- function(meta_mags, mags){
   num_meta <- nrow(meta_mags)
   meta_mags <- meta_mags %>% filter(!is.na(!!mags)) # omit NAs
   fil_meta <- num_meta - nrow(meta_mags)
-  message("\n NOTE:", fil_meta, "MAGs were discarded due to missing microbial lienage classification")
+  message("\n NOTE:", fil_meta, " MAGs were discarded due to missing microbial lienage classification")
   
   # Count the number of MAGs per site and phylogenetic groups
   mags_by_sites <- meta_mags %>%
@@ -101,12 +102,12 @@ for (col1 in colnames(mags_by_sites)) {
   
   # Imprimir progreso
   counter <- counter + 1
-  if (counter %% 10 == 0) {
+  if (counter %% 100 == 0) {
     elapsed <- difftime(Sys.time(), start_time, units = "mins")
     # percentage <- round((counter / ncol(motus_by_site)) * 100, 2)
     
-    message("\n- MAGs procesados:", counter)
-    message("- Tiempo de proceso: ", round(elapsed, 2), " mins")
+    message("\n- Microbial lineages processed:", counter)
+    message("- Time: ", round(elapsed, 2), " mins ...")
     
   }
   
@@ -175,6 +176,28 @@ message("\n NOTE:",filt_cases, " cases where the BGC is in the genome were disca
 # Save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
+# disributions of p-values
+pvalues_e <- ggplot(cases, aes(x = pvalue_e)) +
+  geom_histogram(binwidth = 0.05, fill = "steelblue") +
+  labs(
+    title = paste("Distribución de p-values de co-exclusion de ",  mag_lineage, " y ", bgc_group),
+    x = "p-value",
+    y = "Frecuencia"
+  ) +
+  theme_minimal()
+ggsave(file = paste0(opt$outdir,"exclusion_pvalues.png"), plot = pvalues_e, width = 34, height = 18, units = "cm")
+
+
+pvalues_o <- ggplot(cases, aes(x = pvalue_o)) +
+  geom_histogram(binwidth = 0.05, fill = "steelblue") +
+  labs(
+    title = paste("Distribución de p-values de co-ocurrencia de ",  mag_lineage, " y ", bgc_group),
+    x = "p-value",
+    y = "Frecuencia"
+  ) +
+  theme_minimal()
+ggsave(file = paste0(opt$outdir,"occurrence_pvalues.png"), plot = pvalues_o, width = 34, height = 18, units = "cm")
+
 message("\n Output saved")
 
 
@@ -183,34 +206,18 @@ message("\n Output saved")
 ###### MUTLIPLE TESTING CORRECTION ##############
 
 # cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
+# cases2 <- cases %>%
+#   filter(mags_sites > 25 | bgcs_sites > 25)
 # 
-# cases <- cases %>%
-#   mutate(fdr_pval_e = p.adjust(cases$pvalue_e, method = "BH"),
-#          fdr_pval_o = p.adjust(cases$pvalue_o, method = "BH"),
-#          fwer_pval_e = p.adjust(cases$pvalue_e, method = "bonferroni"), 
-#          fwer_pval_o = p.adjust(cases$pvalue_o, method = "bonferroni")) 
 # 
-### poner un umbral mas pequeño, como 10 
-### histogrma de ovalues 
+# cases2 <- cases2 %>%
+#   mutate(fdr_pval_e = p.adjust(cases2$pvalue_e, method = "BH"),
+#          fdr_pval_o = p.adjust(cases2$pvalue_o, method = "BH"),
+#          fwer_pval_e = p.adjust(cases2$pvalue_e, method = "bonferroni"),
+#          fwer_pval_o = p.adjust(cases2$pvalue_o, method = "bonferroni"))
 
-#reducir el numero de sitios y compara ciones 
 
-# armonic mean p-valuee (concepto)
-# agrupar p-values
-# prede ir cosa que se puede hacer
-# mapa: instalar terra 
 
-# example <- recreate_table("meta_mOTU_v25_12843", "gcf_871", mags_by_sites, bgcs_by_sites)
-# 
-# 
-# mOTU12843 <- meta_bgcs %>%
-#   filter(gcf == "gcf_871")
-# 
-# 
-# mOTU12843 <- meta_mags %>%
-#   filter(mOTUs_Species_Cluster == "meta_mOTU_v25_12843")
-
-######  PLOTING SITES  ##
 
 
 
