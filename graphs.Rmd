@@ -136,4 +136,5 @@ filt_ocur <- co_ocur %>%
 
 
 
-
+######  PLOTING SITES  ##########
+# mapa: instalar terra
