@@ -28,8 +28,8 @@ Count the number of Metagenome Assembled Genomes (MAGs) per site and the microbi
 
 ```{r count_mags}
 # number of mOTUs
-#motus <- meta_mags %>% 
-#  distinct(mOTUs.Species.Cluster)
+motus <- meta_mags %>% 
+  distinct(family)
 
 # Count the number of MAGs per site and mOTUs
 motus_by_sites <- meta_mags %>%
@@ -41,12 +41,12 @@ Add the locations to the BGCs table based on the MAGs from where they were found
 
 ```{r count_bgcs}
 # bind the column station to each BGC using the column Genome ass a reference to match it 
-bgcs_sites <- meta_bgcs %>%
-  left_join(meta_mags %>% select(Genome, station), by = "Genome")
+#bgcs_sites <- meta_bgcs %>%
+#  left_join(meta_mags %>% select(Genome, station), by = "Genome")
 
 # number of GCFs 
-#gcfs <- bgcs_sites %>% 
-#  distinct(gcf)
+gcfs <- meta_bgcs %>% 
+  distinct(gcc)
 
 # count the number of BGCs per site and GCF
 gcfs_by_sites <- bgcs_sites %>%
