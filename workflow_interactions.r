@@ -1,12 +1,11 @@
 ################################################
 ### Identifying interactions workflow ##########
 ## Andrea Zermeño Díaz #########################
-# marzo-2025 ###################################
+# march-2025 ###################################
 
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
-library(ggplot2)
 
 ########### Functions #################
 
@@ -64,7 +63,7 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
-  make_option(c("-s", "--minimum_sites"), type="numeric", default=5, help="Minimum number of sites where a group is present"),
+  make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
   make_option(c("-i", "--workdir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory")
 )
@@ -77,6 +76,7 @@ min_sites <- opt$minimum_sites
 # Run script
 # Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
 # -o /mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/
+
 message("\n Preparing input, please wait ...")
 
 meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
@@ -130,7 +130,7 @@ for (col1 in colnames(mags_by_sites)) {
     ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
                       (temp3[[col1]] > 0 & temp3[[col2]] == 0))
     oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
-    
+    m = sqrt(ex_sites)/oc_sites
     # save all the combinations of MAGi and BGCj and other data
     cases_list[[length(cases_list) + 1]] <- list(
       # names  
@@ -176,48 +176,7 @@ message("\n NOTE:",filt_cases, " cases where the BGC is in the genome were disca
 # Save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
 
-# disributions of p-values
-pvalues_e <- ggplot(cases, aes(x = pvalue_e)) +
-  geom_histogram(binwidth = 0.05, fill = "steelblue") +
-  labs(
-    title = paste("Distribución de p-values de co-exclusion de ",  mag_lineage, " y ", bgc_group),
-    x = "p-value",
-    y = "Frecuencia"
-  ) +
-  theme_minimal()
-ggsave(file = paste0(opt$outdir,"exclusion_pvalues.png"), plot = pvalues_e, width = 34, height = 18, units = "cm")
-
-
-pvalues_o <- ggplot(cases, aes(x = pvalue_o)) +
-  geom_histogram(binwidth = 0.05, fill = "steelblue") +
-  labs(
-    title = paste("Distribución de p-values de co-ocurrencia de ",  mag_lineage, " y ", bgc_group),
-    x = "p-value",
-    y = "Frecuencia"
-  ) +
-  theme_minimal()
-ggsave(file = paste0(opt$outdir,"occurrence_pvalues.png"), plot = pvalues_o, width = 34, height = 18, units = "cm")
-
 message("\n Output saved")
-
-
-
-
-###### MUTLIPLE TESTING CORRECTION ##############
-
-# cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
-# cases2 <- cases %>%
-#   filter(mags_sites > 25 | bgcs_sites > 25)
-# 
-# 
-# cases2 <- cases2 %>%
-#   mutate(fdr_pval_e = p.adjust(cases2$pvalue_e, method = "BH"),
-#          fdr_pval_o = p.adjust(cases2$pvalue_o, method = "BH"),
-#          fwer_pval_e = p.adjust(cases2$pvalue_e, method = "bonferroni"),
-#          fwer_pval_o = p.adjust(cases2$pvalue_o, method = "bonferroni"))
-
-
-
 
 
 
