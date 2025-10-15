@@ -125,20 +125,18 @@ bp2 <- ggplot(signifs_oc, aes(x = grupos, y = num_signif)) +
   theme_minimal(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
-    title = "Número co-ocurrencias significativas (FDR < 0.05)",
-    x = "Tipo de grupamiento",
+    title = "Number of significative co-ocurrences (FDR < 0.05)",
+    x = "Group type",
     y = "Number of significative cases"
   ) +
   guides(fill = "none")
 bp_final <- (bp1 + bp2) +
   plot_layout(ncol = 2, nrow = 1)
-
-
+bp_final
 
 
 
 ### Map of the sites with interaction patterns ###
-
 
 library(terra)
 library(rnaturalearth)
@@ -192,13 +190,86 @@ map <- ggplot() +
   theme(legend.position = "bottom")
 map
 
-##### INFO OF THE GROUPS ##############
+### INFO OF THE GROUPS ####
 
-#mOTU12843 <- meta_bgcs %>%
+#gcf_871 <- meta_bgcs %>%
 #  filter(gcf == "gcf_871")
 #mOTU12843 <- meta_mags %>%
 #  filter(mOTUs_Species_Cluster == "meta_mOTU_v25_12843")
 
+
+### NETWORKS ###
+
+# Red no dirigida
+# Cada nodo es un grupo de MAGs/BGCs
+# El color de la linea es si la interaccion es de exclusion o ocurrencia
+
+library(ggraph)
+library(igraph)
+
+ntwk_graph <- function(data, grado_min = 100) {
+  
+  # separar los casos significativos
+  red_oc <- data %>% filter(fdr_pval_o < 0.05)
+  red_ex <- data %>% filter(fdr_pval_e < 0.05)
+  
+  # grafo no firigido
+  red_oc <- graph_from_data_frame(
+    d = red_oc %>% select(Mags, Bgcs),
+    directed = FALSE
+  )
+  red_ex <- graph_from_data_frame(
+    d = red_ex %>% select(Mags, Bgcs),
+    directed = FALSE
+  )
+  
+  # calcular grado de cada nodo 
+  V(red_oc)$grado <- degree(red_oc)
+  V(red_ex)$grado <- degree(red_ex)
+  
+  # graficar
+  plot_oc <- ggraph(red_oc, layout = "fr", niter = 1000) +
+    geom_edge_link(color = "steelblue", width = 0.8, alpha = 0.5) +
+    geom_node_point(aes(size = grado), color = "darkblue", alpha = 0.9) +
+    geom_node_text(
+      aes(label = ifelse(grado > grado_min, name, "")),
+      repel = TRUE, size = 3, max.overlaps = 100
+    ) +
+    theme_void() +
+    ggtitle("Red de co-ocurrencia")
+  plot_ex <- ggraph(red_ex, layout = "fr") + 
+    geom_edge_link(color = "tomato", width = 0.8) + 
+    geom_node_point(aes(size = grado), color = "pink") + 
+    geom_node_text(aes(label = name), repel = TRUE, size = 3) + 
+    theme_void() + 
+    ggtitle("Red de co-exclusion")
+  
+  # devolver lista
+  return(list(
+    red_oc = red_oc,
+    red_ex = red_ex,
+    plot_oc = plot_oc,
+    plot_ex = plot_ex
+  ))
+}
+
+# ejemplo
+resultado <- ntwk_graph(gen_gcf, grado_min = 100)
+resultado$plot_oc
+
+
+# grado de los nodos en tabla para graficar
+grado_mags <- gen_gcf %>%
+  count(Mags, name = "grado") %>%   # cuenta cuántas veces aparece cada MAG
+  rename(nodo = Mags) %>%
+  arrange(desc(grado)) %>%
+  mutate(tipo = "MAG")
+
+grado_bgcs <- gen_gcf %>%
+  count(Bgcs, name = "grado") %>%   # cuenta cuántas veces aparece cada BGC
+  rename(nodo = Bgcs) %>%
+  arrange(desc(grado)) %>%
+  mutate(tipo = "BGC")
 
 
 
