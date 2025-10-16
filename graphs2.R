@@ -66,12 +66,16 @@ p_final
 
 # correcting by FDR and filtering the cases with p-value > 0.05
 correct <- function(df) {
-  df %>%
+  df <- df %>%
     mutate(
       fdr_pval_e = p.adjust(pvalue_e, method = "BH"),
       fdr_pval_o = p.adjust(pvalue_o, method = "BH")
-    ) %>%
-    filter(fdr_pval_e < 0.05 | fdr_pval_o < 0.05) 
+    )
+  
+  list(
+    exclusion = df %>% filter(fdr_pval_e < 0.05),
+    occurrence = df %>% filter(fdr_pval_o < 0.05)
+  )
 }
 
 motu_gcf <- correct(motu_gcf)
@@ -81,7 +85,7 @@ fam_gcc <- correct(fam_gcc)
 gen_gcf <- correct(gen_gcf)
 gen_gcc <- correct(gen_gcc)
 
-
+#### BUG (la funcion ahora genera una lista lol)
 signifs_ex <- tibble(
   mOTUs_gcf = sum(motu_gcf$fdr_pval_e < 0.05),
   mOTUs_gcc = sum(motu_gcc$fdr_pval_e < 0.05),
@@ -206,70 +210,11 @@ map
 
 library(ggraph)
 library(igraph)
-
-ntwk_graph <- function(data, grado_min = 100) {
-  
-  # separar los casos significativos
-  red_oc <- data %>% filter(fdr_pval_o < 0.05)
-  red_ex <- data %>% filter(fdr_pval_e < 0.05)
-  
-  # grafo no firigido
-  red_oc <- graph_from_data_frame(
-    d = red_oc %>% select(Mags, Bgcs),
-    directed = FALSE
-  )
-  red_ex <- graph_from_data_frame(
-    d = red_ex %>% select(Mags, Bgcs),
-    directed = FALSE
-  )
-  
-  # calcular grado de cada nodo 
-  V(red_oc)$grado <- degree(red_oc)
-  V(red_ex)$grado <- degree(red_ex)
-  
-  # graficar
-  plot_oc <- ggraph(red_oc, layout = "fr", niter = 1000) +
-    geom_edge_link(color = "steelblue", width = 0.8, alpha = 0.5) +
-    geom_node_point(aes(size = grado), color = "darkblue", alpha = 0.9) +
-    geom_node_text(
-      aes(label = ifelse(grado > grado_min, name, "")),
-      repel = TRUE, size = 3, max.overlaps = 100
-    ) +
-    theme_void() +
-    ggtitle("Red de co-ocurrencia")
-  plot_ex <- ggraph(red_ex, layout = "fr") + 
-    geom_edge_link(color = "tomato", width = 0.8) + 
-    geom_node_point(aes(size = grado), color = "pink") + 
-    geom_node_text(aes(label = name), repel = TRUE, size = 3) + 
-    theme_void() + 
-    ggtitle("Red de co-exclusion")
-  
-  # devolver lista
-  return(list(
-    red_oc = red_oc,
-    red_ex = red_ex,
-    plot_oc = plot_oc,
-    plot_ex = plot_ex
-  ))
-}
-
-# ejemplo
-resultado <- ntwk_graph(gen_gcf, grado_min = 100)
-resultado$plot_oc
+library(RCy3)
+cytoscapePing()
 
 
-# grado de los nodos en tabla para graficar
-grado_mags <- gen_gcf %>%
-  count(Mags, name = "grado") %>%   # cuenta cuántas veces aparece cada MAG
-  rename(nodo = Mags) %>%
-  arrange(desc(grado)) %>%
-  mutate(tipo = "MAG")
-
-grado_bgcs <- gen_gcf %>%
-  count(Bgcs, name = "grado") %>%   # cuenta cuántas veces aparece cada BGC
-  rename(nodo = Bgcs) %>%
-  arrange(desc(grado)) %>%
-  mutate(tipo = "BGC")
+  
 
 
 
