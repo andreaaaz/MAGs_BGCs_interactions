@@ -214,7 +214,37 @@ library(RCy3)
 cytoscapePing()
 
 
-  
+oc <- motu_gcf$occurrence
 
+# lista de nodos
+nodes <- data.frame(
+  id = unique(c(oc$Mags, oc$Bgcs)),
+  type = c(rep("MAG", length(unique(oc$Mags))),
+           rep("BGC", length(unique(oc$Bgcs))))
+)
+# aristas
+edges <- oc %>%
+  rename(source = Mags, target = Bgcs, weight = fdr_pval_o)
 
+# grafo
+g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
+
+# Agregar grado de nodo
+nodes$degree <- degree(g)
+createNetworkFromDataFrames(nodes = nodes, edges = edges,
+                            title = "mOTUs-GCCs", collection = "Interacions MAGs-BGCs")
+currentNetwork <- "mOTUs-GCCs"
+setCurrentNetwork(currentNetwork)
+layoutNetwork("force-directed")
+
+# MAGs = círculos, BGCs = triángulos
+setNodeShapeMapping("type", c("MAG","BGC"), c("ELLIPSE","TRIANGLE"))
+# Tamaño de nodos
+setNodeSizeMapping("degree", min(nodes$degree), max(nodes$degree), mapping.type = "c")
+# Grosor de aristas
+edges$edgeWidth <- -log10(edges$weight)  # o cualquier transformación
+setEdgeLineWidthMapping("edgeWidth", min(edges$edgeWidth), max(edges$edgeWidth), 1, 10, mapping.type = "c")
+
+# Color opcional por tipo
+setNodeColorMapping("type", c("MAG","BGC"), c("#1f78b4","#33a02c"))
 
