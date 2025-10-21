@@ -213,32 +213,61 @@ library(igraph)
 library(RCy3)
 cytoscapePing()
 
+cytograph <- function(df, name, rep_mags, rep_bgcs) {
+  nodes <- data.frame(
+    id = unique(c(df$Mags, df$Bgcs)),
+    type = c(rep("MAG", length(unique(df$Mags))),
+             rep("BGC", length(unique(df$Bgcs))))
+  )
+  edges <- df %>%
+    rename(source = Mags, target = Bgcs, weight = fdr_pval_o)
+  g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
+  nodes$degree <- degree(g)
+  
+  nodes <- left_join(nodes, rep_mags, by = mOTUs_Species_Cluster)
+  nodes <- left_join(nodes, rep_bgcs, by = gcc)
+  
+  createNetworkFromDataFrames(nodes = nodes, edges = edges,
+                              title = name, collection = "Interacions MAGs-BGCs")
+  setNodeShapeMapping("type", c("MAG","BGC"), c("ELLIPSE","DIAMOND"))
+  
+  top_nodes <- nodes %>%
+    arrange(desc(degree)) %>%
+    slice_head(n = 8)
+  
+  setNodeColorDefault("#D3D3D3")  
+  setNodeColorBypass(node.names = top_nodes$id,
+                           new.colors = RColorBrewer::brewer.pal(min(10, 9), "Set1"))
+}
+  
+oc <- motu_gcc$occurrence
+network <- cytograph(oc, "mOTUs-GCCs", rep_mags, rep_bgcs)
 
-oc <- motu_gcf$occurrence
 
-# lista de nodos
-nodes <- data.frame(
-  id = unique(c(oc$Mags, oc$Bgcs)),
-  type = c(rep("MAG", length(unique(oc$Mags))),
-           rep("BGC", length(unique(oc$Bgcs))))
-)
-# aristas
-edges <- oc %>%
-  rename(source = Mags, target = Bgcs, weight = fdr_pval_o)
+### colors by group
+rep_bgcs <- meta_bgcs %>%
+  group_by(gcc, products) %>%          
+  summarise(n = n(), .groups = "drop_last") %>%  
+  slice_max(order_by = n, n = 1) %>%    
+  select(gcc, rep_bgc = products)
 
-# grafo
-g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
+rep_mags <- meta_mags %>%
+  group_by(mOTUs_Species_Cluster, family) %>%        
+  summarise(n = n(), .groups = "drop_last") %>%  
+  slice_max(order_by = n, n = 1) %>%    
+  select(mOTUs_Species_Cluster, rep_mag = family)
 
-# Agregar grado de nodo
-nodes$degree <- degree(g)
-createNetworkFromDataFrames(nodes = nodes, edges = edges,
-                            title = "mOTUs-GCCs", collection = "Interacions MAGs-BGCs")
-currentNetwork <- "mOTUs-GCCs"
-setCurrentNetwork(currentNetwork)
-layoutNetwork("force-directed")
+
+
+
+
+
+
+
+
 
 # MAGs = círculos, BGCs = triángulos
-setNodeShapeMapping("type", c("MAG","BGC"), c("ELLIPSE","TRIANGLE"))
+setNodeShapeMapping("type", c("MAG","BGC"), c("ELLIPSE","DIAMOND"))
 # Tamaño de nodos
 setNodeSizeMapping("degree", min(nodes$degree), max(nodes$degree), mapping.type = "c")
 # Grosor de aristas
@@ -247,4 +276,4 @@ setEdgeLineWidthMapping("edgeWidth", min(edges$edgeWidth), max(edges$edgeWidth),
 
 # Color opcional por tipo
 setNodeColorMapping("type", c("MAG","BGC"), c("#1f78b4","#33a02c"))
-
+# 
