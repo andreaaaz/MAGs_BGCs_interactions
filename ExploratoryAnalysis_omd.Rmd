@@ -77,8 +77,9 @@ meta_magsT <- metadata_filt %>%
   mutate(across(
     c(domain, phylum, class, order, family, genus, species),
     ~ na_if(., "")  # conviertir a NA
-  ))
-
+  )) 
+meta_mags <- meta_mags %>%
+  mutate(sites = paste(station, sprintf("%.2f", depth), sep = "_"))
 
 write.csv(meta_magsT, "metadata.csv", row.names = FALSE)
 ```
@@ -206,3 +207,27 @@ ggsave("bgcs.png", plot = bgcs_class, width = 35, height = 18, units = "in")
 
 ```
 
+
+```{r}
+bgc_productos <- meta_bgcs %>%
+  mutate(products = str_split(products, ";")) %>%
+  unnest(products)
+
+
+bgc_long %>%
+  count(products, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  ggplot(aes(x = reorder(products, n), y = n)) +
+  geom_col() +
+  coord_flip() +
+  theme_minimal()
+
+product_enrichment <- bgc_productos %>%
+  count(products) %>%
+  mutate(
+    observed = n / sum(n),
+    expected = 1 / n_distinct(products),
+    log2_enrichment = log2(observed / expected)
+  ) %>%
+  arrange(desc(log2_enrichment))
+```

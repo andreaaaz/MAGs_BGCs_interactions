@@ -23,8 +23,8 @@ plot_pvalues <- function(cases, mag_group, bgc_group) {
     theme_minimal() +
     theme(
       legend.position = "none",
-      axis.text.x = element_text(size = 18),  # Tamaño del texto de los números del eje x
-      axis.title.x = element_text(size = 18),# Tamaño de la etiqueta del eje y
+      axis.text.x = element_text(size = 12),  # Tamaño del texto de los números del eje x
+      axis.title.x = element_text(size = 12),# Tamaño de la etiqueta del eje y
     )
   
   p_occurrence <- ggplot(cases, aes(x = pvalue_o)) +
@@ -37,8 +37,8 @@ plot_pvalues <- function(cases, mag_group, bgc_group) {
     theme_minimal() +
     theme(
       legend.position = "none",
-      axis.text.x = element_text(size = 18),  # Tamaño del texto de los números del eje x
-      axis.title.x = element_text(size = 18), # Tamaño de la etiqueta del eje y
+      axis.text.x = element_text(size = 12),  # Tamaño del texto de los números del eje x
+      axis.title.x = element_text(size = 12), # Tamaño de la etiqueta del eje y
       panel.background = element_rect(fill = NA, color = NA),
       plot.background = element_rect(fill = NA, color = NA)
     )
@@ -157,9 +157,9 @@ library(terra)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-cases <- read.csv(file = '~/2025-interactions/all_cases.csv', header = TRUE)
+oc<- motu_gcc$occurrence
 meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
-example <- recreate_table("meta_mOTU_v25_12843", "gcf_871", mags_by_sites, bgcs_by_sites)
+example <- recreate_table("ref_mOTU_v25_05467", "gcc_22", mags_by_sites, bgcs_by_sites)
 
 #sitios con cordenadas
 sites <- data.frame(
@@ -179,16 +179,16 @@ example <- example %>%
 
 example <- example %>%
   mutate(tipo = case_when(
-    meta_mOTU_v25_12843 > 0 & gcf_871 == 0 ~ "meta_mOTU",
-    meta_mOTU_v25_12843 == 0 & gcf_871 > 0 ~ "gcf",
-    meta_mOTU_v25_12843 > 0 & gcf_871 > 0  ~ "ambos",
-    TRUE                                   ~ "ninguno"
+    ref_mOTU_v25_05467 > 0 & gcc_22 == 0 ~ "mOTU",
+    ref_mOTU_v25_05467 == 0 & gcc_22 > 0 ~ "GCC",
+    ref_mOTU_v25_05467 > 0 & gcc_22 > 0  ~ "Co-occurrence",
+    TRUE                                   ~ "NA"
   ))
 cols <- c(
-  "meta_mOTU" = "#1f77b4",  # azul
-  "gcf"       = "#d62728",  # rojo
-  "ambos"     = "purple",  # morado
-  "ninguno"   = "grey60"    # gris
+  "mOTU" = "#009d14",  
+  "GCC" = "#990099",  
+  "Co-occurrence" = "darkblue", 
+  "ninguno"   = "grey60"   
 )
 
 # convertir a objeto espacial para terra
@@ -199,18 +199,26 @@ map <- ggplot() +
   geom_sf(data = oceanos, fill = "#b4d3e2", color = NA) +
   geom_sf(data = mundo, fill = "#5b6684", color = "#5b6684") +
   geom_point(data = example, aes(x = longitude, y = latitude, color = tipo),
-             alpha = 0.9, size = 2) +
-  scale_color_manual(values = cols, name = "Tipo de interacción") +
-  theme_minimal() +
-  theme(legend.position = "bottom")
+             alpha = 0.9, size = 1) +
+  scale_color_manual(values = cols, name = "Type of interaction") +
+  theme_minimal(base_size = 18) +
+  theme( plot.background = element_rect(fill = NA, color = NA),   # fondo transparente
+         panel.background = element_rect(fill = NA, color = NA),  # panel transparente
+         legend.background = element_rect(fill = NA, color = NA), # fondo de leyenda transparente
+         legend.key = element_rect(fill = NA, color = NA),        # clave de leyenda transparente
+         axis.text = element_text(size = 16),
+         axis.title = element_text(size = 18, face = "bold"),
+         legend.title = element_text(size = 18, face = "bold"),
+         legend.text = element_text(size = 16))
 map
+ggsave("map.png", plot = map, width = 42, height = 22, units = "cm", bg = "transparent")
 
 ### INFO OF THE GROUPS ####
 
-#gcf_871 <- meta_bgcs %>%
-#  filter(gcf == "gcf_871")
-#mOTU12843 <- meta_mags %>%
-#  filter(mOTUs_Species_Cluster == "meta_mOTU_v25_12843")
+gcc_22 <- meta_bgcs %>%
+  filter(gcc == "gcc_22")
+mOTU5467 <- meta_mags %>%
+  filter(mOTUs_Species_Cluster == "ref_mOTU_v25_05467")
 
 
 ### NETWORKS ###
@@ -237,8 +245,8 @@ rep_mags <- meta_mags %>%
   slice_max(order_by = n, n = 1) %>%
   select(mOTUs_Species_Cluster, rep_mag = family) %>%
   rename(id = mOTUs_Species_Cluster)
-
 ### 2. Crear nodos y aristas ----
+
 nodes <- data.frame(
   id = unique(c(oc$Mags, oc$Bgcs)),
   type = c(rep("MAG", length(unique(oc$Mags))),
@@ -420,3 +428,145 @@ legend_df <- tibble(
   Grupo = c(top_mag_groups, top_bgc_groups),
   Color = c(mag_colors, bgc_colors)
 )
+
+# ---- Sub y sobre abundancia productos BGCs
+
+# esperados (dataset global)
+esp <- meta_bgcs %>%
+  count(products) %>%
+  mutate(rel_abundance = n / sum(n)) %>%
+  arrange(desc(rel_abundance)) %>%
+  rename(product = products, expected = rel_abundance)
+
+# observados 
+oc <- oc %>%
+  left_join(rep_bgcs, by = c("Bgcs"="id")) #asignar productos a gccs de la red
+obs <- oc %>%
+  count(rep_bgc) %>%
+  mutate(rel_abundance = n / sum(n)) %>%
+  arrange(desc(rel_abundance))%>%
+  rename(product = rep_bgc, observed = rel_abundance)
+enrichment <- obs %>%
+  left_join(esp, by = "product") %>%
+  mutate(log2_enrichment = log2(observed / expected)) %>%
+  arrange(desc(log2_enrichment)) %>%
+  left_join(legend_df, by = c("product" = "Grupo")) %>%
+  mutate(
+    fill_color = ifelse(is.na(Color), "grey", Color)  
+  )
+
+# grafica
+
+enrichment_plot <- enrichment %>%
+  ggplot(aes(
+    x = log2_enrichment,
+    y = reorder(product, log2_enrichment),
+    fill = fill_color
+  )) +
+  geom_col() +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_identity() +
+  theme_minimal() +
+  labs(
+    x = expression(Log[2](Observed/Expected)),
+    y = "Biosynthetic product"
+  )
+ggsave("enrichment.png", plot = enrichment_plot, width = 20, height = 10, units = "cm")
+
+
+### --- PRODUCTION NETWORK
+gcc_22 <- gcc_22 %>%
+  separate(Taxonomy,
+           into = c("domain", "phylum", "class", "order", "family", "genus", "species"),
+           sep = ";",
+           fill = "right",
+           remove = FALSE) %>%
+  mutate(across(
+    c(domain, phylum, class, order, family, genus, species),
+    ~ str_remove(., "^[a-z]__")  # elimina prefijos  d__ y asi
+  )) %>%
+  mutate(across(
+    c(domain, phylum, class, order, family, genus, species),
+    ~ na_if(., "")  # conviertir a NA
+  )) 
+gcc_22 <- gcc_22 %>%
+  left_join(meta_mags %>% select(Genome, mOTUs_Species_Cluster), by = "Genome")
+
+mOTU5467 <- mOTU5467 %>%
+  mutate(gcc = "gcc_22")
+
+
+gcc_node <- gcc_22 %>%
+  distinct(gcc) %>%
+  transmute(
+    id = gcc,
+    type = "GCC",
+    family = NA
+  )
+producer_nodes <- gcc_22 %>%
+  distinct(mOTUs_Species_Cluster, family) %>%
+  transmute(
+    id = mOTUs_Species_Cluster,
+    type = "Producer",
+    family = family
+  )
+eco_node <- mOTU5467 %>%
+  transmute(
+    id = mOTUs_Species_Cluster,
+    type = "interactor",
+    family = family
+  )
+nodes <- bind_rows(gcc_node, producer_nodes, eco_node) %>%
+  distinct(id, .keep_all = TRUE)
+production_edges <- gcc_22 %>%
+  distinct(mOTUs_Species_Cluster, gcc) %>%
+  transmute(
+    source = mOTUs_Species_Cluster,
+    target = gcc,
+    interaction = "production"
+  )
+eco_edges <- mOTU5467 %>%
+  transmute(
+    source = mOTUs_Species_Cluster,
+    target = gcc,
+    interaction = "ecological_interaction"
+  )
+
+edges <- bind_rows(production_edges, eco_edges)
+
+createNetworkFromDataFrames(
+  nodes = nodes,
+  edges = edges,
+  title = "GCC production and ecological interaction",
+  collection = "GCC ecological networks"
+)
+setNodeShapeMapping(
+  "type",
+  c("GCC", "Producer", "Ecological_interactor"),
+  c("HEXAGON", "ELLIPSE", "TRIANGLE")
+)
+families <- nodes %>%
+  filter(!is.na(family)) %>%
+  pull(family) %>%
+  unique()
+
+family_colors <- substr(
+  as.vector(
+    paletteer::paletteer_d(
+      palette = "ggthemes::calc",
+      n = length(families)
+    )
+  ),
+  1, 7
+)
+setNodeColorMapping(
+  table.column = "family",
+  table.column.values = families,
+  colors = family_colors
+)
+setEdgeLineStyleMapping(
+  "interaction",
+  c("production", "ecological_interaction"),
+  c("SOLID", "DASHED")
+)
+
