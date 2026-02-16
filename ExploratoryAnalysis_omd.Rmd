@@ -78,10 +78,12 @@ meta_magsT <- metadata_filt %>%
     c(domain, phylum, class, order, family, genus, species),
     ~ na_if(., "")  # conviertir a NA
   )) 
+
+# Unir estacion con profundidad para definir sitios
 meta_mags <- meta_mags %>%
   mutate(sites = paste(station, sprintf("%.2f", depth), sep = "_"))
 
-write.csv(meta_magsT, "metadata.csv", row.names = FALSE)
+write.csv(meta_mags, "~/MAGs_BGCs_interactions/metadata.csv", row.names = FALSE)
 ```
 
 
