@@ -84,6 +84,12 @@ meta_mags <- meta_mags %>%
   mutate(sites = paste(station, sprintf("%.2f", depth), sep = "_"))
 
 write.csv(meta_mags, "~/MAGs_BGCs_interactions/metadata.csv", row.names = FALSE)
+
+meta_bgcs<- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, sites), by = "Genome")
+
+write.csv(meta_bgcs, "~/MAGs_BGCs_interactions/bgcs_metadata.csv", row.names = FALSE)
+
 ```
 
 

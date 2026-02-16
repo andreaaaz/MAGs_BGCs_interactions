@@ -19,7 +19,7 @@ prep_mags <- function(meta_mags, mags){
   
   # Count the number of MAGs per site and phylogenetic groups
   mags_by_sites <- meta_mags %>%
-    count(station, !!mags) %>%
+    count(sites, !!mags) %>%
     pivot_wider(names_from = !!mags, values_from = n, values_fill = 0)
   
   return(mags_by_sites)
@@ -30,7 +30,7 @@ prep_bgcs <- function(meta_bgcs, bgcs){
   
   # count the number of BGCs per site and GCF
   bgcs_by_sites <- meta_bgcs %>%
-    count(station, !!bgcs) %>%
+    count(sites, !!bgcs) %>%
     pivot_wider(names_from = !!bgcs, values_from = n, values_fill = 0)
   
   return(bgcs_by_sites)
@@ -39,12 +39,12 @@ prep_bgcs <- function(meta_bgcs, bgcs){
 
 recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
   
-  # select the station column and the current column for both tables
-  table1 <- m_by_sites[, c("station", mag), drop = FALSE]
-  table2 <- b_by_sites[, c("station", bgc), drop = FALSE]
+  # select the site column and the current column for both tables
+  table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
+  table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
   
-  # bind col1 and col2 by station (full_join porque sino se pierden interacciones)
-  table_comb <- full_join(table1, table2, by = "station")
+  # bind col1 and col2 by site (full_join porque sino se pierden interacciones)
+  table_comb <- full_join(table1, table2, by = "sites")
   
   # convertir a 0 los NAs generados por el join
   table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
@@ -92,13 +92,13 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
 # tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
-total_sites <- length(unique(mags_by_sites$station))
+total_sites <- length(unique(mags_by_sites$sites))
 #para imprimir avance
 counter <- 0
 start_time <- Sys.time()
 
 for (col1 in colnames(mags_by_sites)) {
-  if (col1 == "station") next
+  if (col1 == "sites") next
   
   # Imprimir progreso
   counter <- counter + 1
@@ -112,7 +112,7 @@ for (col1 in colnames(mags_by_sites)) {
   }
   
   for (col2 in colnames(bgcs_by_sites)) { 
-    if (col2 == "station") next
+    if (col2 == "sites") next
     
     # create table of magi and bgcj
     temp3 <- recreate_table(col1, col2, mags_by_sites, bgcs_by_sites)
