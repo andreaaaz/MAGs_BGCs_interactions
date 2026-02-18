@@ -7,6 +7,8 @@
 library(tidyverse)
 library(ggplot2)
 library(patchwork)
+library(purrr)
+
 
 ######### P-VALUES ANALYSIS ########## 
 ### Statistical signals ###
@@ -49,18 +51,18 @@ plot_pvalues <- function(cases, mag_group, bgc_group) {
 
 #load data
 motu_gcf <- read.csv(file = '~/2025-interacions/motu_gcf/all_cases.csv', header = TRUE)
-motu_gcc <- read.csv(file = '~/2025-interacions/motu_gcc/all_cases.csv', header = TRUE)
-fam_gcf <- read.csv(file = '~/2025-interacions/fam_gcf/all_cases.csv', header = TRUE)
-fam_gcc <- read.csv(file = '~/2025-interacions/fam_gcc/all_cases.csv', header = TRUE)
-gen_gcf <- read.csv(file = '~/2025-interacions/gen_gcf/all_cases.csv', header = TRUE)
-gen_gcc <- read.csv(file = '~/2025-interacions/gen_gcc/all_cases.csv', header = TRUE)
+motu_gcc <- read.csv(file = '~/2026-interactions/motu_gcc/all_cases.csv', header = TRUE)
+fam_gcf <- read.csv(file = '~/2026-interactions/fam_gcf/all_cases.csv', header = TRUE)
+fam_gcc <- read.csv(file = '~/2026-interactions/fam_gcc/all_cases.csv', header = TRUE)
+gen_gcf <- read.csv(file = '~/2026-interactions/gen_gcf/all_cases.csv', header = TRUE)
+gen_gcc <- read.csv(file = '~/2026-interactions/gen_gcc/all_cases.csv', header = TRUE)
 meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
 meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
 
 # create the plots
 plots <- list(
   plot_pvalues(motu_gcc, 'mOTUs', 'GCCs'),
-  plot_pvalues(motu_gcc, 'mOTUs', 'GCCs'),
+  plot_pvalues(motu_gcf, 'mOTUs', 'GCFs'),
   plot_pvalues(fam_gcf,  'families', 'GCFs'),
   plot_pvalues(fam_gcc,  'families', 'GCCs'),
   plot_pvalues(gen_gcf,  'genus', 'GCFs'),
@@ -73,7 +75,7 @@ plots_flat <- do.call(c, plots)
 p_final <- wrap_plots(plots_flat, ncol = 4, nrow = 3) +
   plot_annotation(title = "Distribución de p-values")
 
-ggsave("/home/azermeno/dist_pvalue.png", plot = p_final, width = 9, height = 4.5, units = "in")
+ggsave("~/2026-interactions/dist.png", plot = p_final, width = 9, height = 4.5, units = "in")
 
 
 ### Multiple testing correction by FDR ### 
@@ -100,50 +102,44 @@ gen_gcf <- correct(gen_gcf)
 gen_gcc <- correct(gen_gcc)
 
 
-#### BUG (la funcion ahora genera una lista lol)
-signifs_ex <- tibble(
-  mOTUs_gcc = sum(motu_gcc$fdr_pval_e < 0.05)
-) %>% 
-  pivot_longer(
-    cols = everything(),
-    names_to = "groups",
-    values_to = "num_signif"
-  )
+#### Plot laa cantidad de casos para cada combinacion
+listas <- list(
+  motu_gcf = motu_gcf,
+  motu_gcc = motu_gcc,
+  fam_gcf  = fam_gcf,
+  fam_gcc  = fam_gcc,
+  gen_gcf  = gen_gcf,
+  gen_gcc  = gen_gcc
+)
 
-signifs_oc <- tibble(
-  mOTUs_gcf = sum(motu_gcf$fdr_pval_o < 0.05),
-  mOTUs_gcc = sum(motu_gcc$fdr_pval_o < 0.05),
-  fam_gcf  = sum(fam_gcf$fdr_pval_o < 0.05),
-  fam_gcc  = sum(fam_gcc$fdr_pval_o < 0.05),
-  gen_gcf  = sum(gen_gcf$fdr_pval_o < 0.05),
-  gen_gcc  = sum(gen_gcc$fdr_pval_o < 0.05)
-) %>% 
-  pivot_longer(
-    cols = everything(),
-    names_to = "groups",
-    values_to = "num_signif"
-  )
-bp1 <- ggplot(signifs_ex, aes(x = groups, y = num_signif)) +
+sum_cases <- imap_dfr(listas, ~ tibble(
+  dataset = .y,
+  exclusion_n = nrow(.x$exclusion),
+  occurrence_n = nrow(.x$occurrence)
+))
+
+
+bp1 <- ggplot(sum_cases, aes(x = dataset, y = exclusion_n)) +
   geom_col(fill = "darkblue") +
+  labs(title = "Co-exclusions (FDR < 0.05)", 
+       x = "Group type", 
+       y = "Number of significative cases") +
+  scale_y_continuous(breaks = seq(0, max(sum_cases$exclusion_n), by = 1)) +
   theme_minimal(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Number of significative co-exclusions (FDR < 0.05)",
-    x = "Group type",
-    y = "Number of significative cases"
-  ) +
   guides(fill = "none")
 
-bp2 <- ggplot(signifs_oc, aes(x = grupos, y = num_signif)) +
+
+
+bp2 <- ggplot(sum_cases, aes(x = dataset, y = occurrence_n)) +
   geom_col(fill = "steelblue") +
+  labs(title = "Co-occurrences (FDR < 0.05)", 
+       x = "Group type", 
+       y = "Number of significative cases") +
   theme_minimal(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Number of significative co-ocurrences (FDR < 0.05)",
-    x = "Group type",
-    y = "Number of significative cases"
-  ) +
   guides(fill = "none")
+
 bp_final <- (bp1 + bp2) +
   plot_layout(ncol = 2, nrow = 1)
 bp_final
@@ -244,8 +240,8 @@ rep_mags <- meta_mags %>%
   slice_max(order_by = n, n = 1) %>%
   select(mOTUs_Species_Cluster, rep_mag = family) %>%
   rename(id = mOTUs_Species_Cluster)
-### 2. Crear nodos y aristas ----
 
+### 2. Crear nodos y aristas ----
 nodes <- data.frame(
   id = unique(c(oc$Mags, oc$Bgcs)),
   type = c(rep("MAG", length(unique(oc$Mags))),
@@ -268,11 +264,11 @@ nodes <- nodes %>%
 top_mag_nodes <- nodes %>%
   filter(type == "MAG") %>%
   arrange(desc(degree)) %>%
-  slice_head(n = 12)
+  slice_head(n = 13)
 top_bgc_nodes <- nodes %>%
   filter(type == "BGC") %>% 
   arrange(desc(degree)) %>%
-  slice_head(n = 13)
+  slice_head(n = 14)
 top_mag_groups <- unique(top_mag_nodes$color_group)
 top_bgc_groups <- unique(top_bgc_nodes$color_group)
 
