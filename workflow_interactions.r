@@ -97,6 +97,11 @@ total_sites <- length(unique(mags_by_sites$sites))
 counter <- 0
 start_time <- Sys.time()
 
+# esto generara 'm x b' tablas de 806 renglones (sitios definidos por station_depth)
+# donde 'm' es el numero de microbial lienages
+# y 'b' es el numero de grupos de BGCs 
+
+
 for (col1 in colnames(mags_by_sites)) {
   if (col1 == "sites") next
   
