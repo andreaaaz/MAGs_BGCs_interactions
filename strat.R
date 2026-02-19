@@ -1,7 +1,0 @@
-## Stratificacion por temperaturas
-
-### Strat
-
-
-
-
