@@ -7,6 +7,12 @@
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
 
+####### filtrar sitios popr temperatura 
+meta_sites <- meta_mags %>%
+  distinct(sites, .keep_all = TRUE) %>%
+  select(temperature_..C., oxygen_.µmol.kg., date, longitude, latitude, depth, depth_layer, station)
+
+
 ########### Functions #################
 
 prep_mags <- function(meta_mags, mags){
