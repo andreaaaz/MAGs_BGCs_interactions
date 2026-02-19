@@ -10,6 +10,22 @@ library(patchwork)
 library(purrr)
 
 
+#### SITES ANALYSIS #####
+
+# obtener los sitios unicos 
+meta_sites <- meta_mags %>%
+  distinct(sites, .keep_all = TRUE) %>%
+  select(sites, temperature_..C., oxygen_.µmol.kg., date, longitude, latitude, depth, depth_layer, station)
+
+# distribucion de temperatura en los sitios
+ggplot(meta_sites, aes(x = temperature_..C.)) + 
+  geom_histogram(bins = 70) + 
+  labs(x = "Tmeperature",
+       y = "Frecuencia") +
+  theme_minimal() 
+
+write.csv(meta_sites, "~/MAGs_BGCs_interactions/meta_sites.csv", row.names = FALSE)
+
 ######### P-VALUES ANALYSIS ########## 
 ### Statistical signals ###
 ## p-values distribution 
@@ -58,6 +74,7 @@ gen_gcf <- read.csv(file = '~/2026-interactions/gen_gcf/all_cases.csv', header =
 gen_gcc <- read.csv(file = '~/2026-interactions/gen_gcc/all_cases.csv', header = TRUE)
 meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
 meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
+meta_sites <- read.csv("~/MAGs_BGCs_interactions/meta_sites.csv")
 
 # create the plots
 plots <- list(

@@ -1,17 +1,11 @@
 ################################################
 ### Identifying interactions workflow ##########
 ## Andrea Zermeño Díaz #########################
-# march-2025 ###################################
+# february-2026 ################################
 
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
-
-####### filtrar sitios popr temperatura 
-meta_sites <- meta_mags %>%
-  distinct(sites, .keep_all = TRUE) %>%
-  select(temperature_..C., oxygen_.µmol.kg., date, longitude, latitude, depth, depth_layer, station)
-
 
 ########### Functions #################
 
@@ -42,7 +36,6 @@ prep_bgcs <- function(meta_bgcs, bgcs){
   return(bgcs_by_sites)
 }  
 
-
 recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
   
   # select the site column and the current column for both tables
@@ -61,7 +54,6 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
   
   return(table_comb)
 }
-
 
 #### DATA LOAD ####
 
@@ -87,6 +79,18 @@ message("\n Preparing input, please wait ...")
 
 meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$workdir, 'bgcs_metadata.csv'), header = TRUE)
+meta_sites <- read.csv(file = paste0(opt$workdir, 'meta_sites.csv'), header = TRUE)
+
+##### Filtrar sitios por temperatura ######
+
+# filtrar los que tengan temperatura
+meta_sites <- meta_sites %>%
+  filter(temperature_..C. > -2 & temperature_..C. < 10)
+
+meta_mags <- meta_mags %>%           
+  filter(sites %in% meta_sites$sites)
+meta_bgcs <- meta_bgcs %>%           
+  filter(sites %in% meta_sites$sites)
 
 
 # Count how many microbial lineages and BGC groups are per site
