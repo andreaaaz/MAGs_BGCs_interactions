@@ -157,30 +157,6 @@ depth <- ggplot(conteo_genomas_por_lugar, aes(x = reorder(`depth layer`, num_gen
   )
 ggsave("depth_layers.png", plot = depth, width = 34, height = 18, units = "cm")
 
-
-
-ggplot(meta_mags, aes(x = depth)) + 
-  geom_histogram(bins = 50) + 
-  labs(title = "Distribución de profundidades",
-       x = "Depth",
-       y = "Frecuencia") 
-
-ggplot(meta_mags, aes(x = depth)) +
-  geom_density(fill = "steelblue", alpha = 0.5)
-
-
-ggplot(meta_mags, aes(x = temperature_..C.)) + 
-  geom_histogram(bins = 70) + 
-  labs(title = "Distribución de profundidades",
-       x = "Depth",
-       y = "Frecuencia")
-
-ggplot(meta_mags, aes(x = depth, y = temperature_..C.)) +
-  geom_point(alpha = 0.6) +
-  labs(title = "Profundidad vs Temperatura",
-       x = "Depth",
-       y = "Temperature")
-
 ```
 
 
