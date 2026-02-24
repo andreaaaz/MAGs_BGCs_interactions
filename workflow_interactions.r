@@ -63,13 +63,15 @@ option_list <- list(
   make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
   make_option(c("-i", "--workdir"), type="character", help="Working directory"),
-  make_option(c("-o", "--outdir"), type="character", help="Output directory")
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-c", "--temp_range"), type="character", default="max", help="Range of temperature (max, mid and min)")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
 mag_lineage <- opt$microbial_lineage
 bgc_group <- opt$bgc_groups
 min_sites <- opt$minimum_sites
+temp_r <- opt$temp_range
 
 # Run script
 # Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
@@ -81,16 +83,21 @@ meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$workdir, 'bgcs_metadata.csv'), header = TRUE)
 meta_sites <- read.csv(file = paste0(opt$workdir, 'meta_sites.csv'), header = TRUE)
 
-##### Filtrar sitios por temperatura ######
+##### TEMPERATURE ######
+
+# definir el rango
+if (temp_r == "min") temp_r <- c(-2, 9)
+if (temp_r == "mid") temp_r <- c(10, 20)
+if (temp_r == "max") temp_r <- c(21, 35)
 
 # filtrar los que tengan temperatura
 meta_sites <- meta_sites %>%
-  filter(temperature_..C. > -2 & temperature_..C. < 10)
+  filter(between(temperature_..C., temp_r[1], temp_r[2]))
 
 meta_mags <- meta_mags %>%           
-  filter(sites %in% meta_sites$sites)
+  semi_join(meta_sites, by = "sites")
 meta_bgcs <- meta_bgcs %>%           
-  filter(sites %in% meta_sites$sites)
+  semi_join(meta_sites, by = "sites")
 
 
 # Count how many microbial lineages and BGC groups are per site
@@ -110,8 +117,6 @@ start_time <- Sys.time()
 # esto generara 'm x b' tablas de 806 renglones (sitios definidos por station_depth)
 # donde 'm' es el numero de microbial lienages
 # y 'b' es el numero de grupos de BGCs 
-
-
 for (col1 in colnames(mags_by_sites)) {
   if (col1 == "sites") next
   
