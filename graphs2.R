@@ -20,8 +20,8 @@ meta_sites <- meta_mags %>%
 # distribucion de temperatura en los sitios
 ggplot(meta_sites, aes(x = temperature_..C.)) + 
   geom_histogram(bins = 70) + 
-  labs(x = "Tmeperature",
-       y = "Frecuencia") +
+  labs(x = "Temperature",
+       y = "Frecuency") +
   theme_minimal() 
 
 write.csv(meta_sites, "~/MAGs_BGCs_interactions/meta_sites.csv", row.names = FALSE)

@@ -60,7 +60,7 @@ recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
 # Args
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
-  make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
+  make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
   make_option(c("-i", "--workdir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
