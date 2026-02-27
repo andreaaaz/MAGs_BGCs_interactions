@@ -179,7 +179,7 @@ message("\n DONE :)")
 # list to data frame
 message("\n Preparing output, please wait ...")
 cases <- bind_rows(cases_list)
-num_cases <- nrow(cases)
+
 
 # filter interactions where the BGC is in the Genome
 meta_bgcs <- meta_bgcs %>%
