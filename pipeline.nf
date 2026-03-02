@@ -14,6 +14,12 @@ process find_cases {
     """
 }
 
+process graphs2 {
+    output: 
+    path '' 
+
+}
+
 workflow {
 
     main:
