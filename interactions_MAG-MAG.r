@@ -82,87 +82,69 @@ mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 # tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
 total_sites <- length(mags_by_sites)
-#para imprimir avance
-counter <- 0
+# para imprimir avance
 start_time <- Sys.time()
-
+# para recorrer las columnas de mags_by_sites
+mag_cols <- colnames(mags_by_sites)
+mag_cols <- mag_cols[mag_cols != "sites"]
+n_mags <- length(mag_cols)
 # esto generara 'm x m' tablas de 806 renglones (sitios definidos por station_depth)
 # donde 'm' es el numero de microbial lienages
-cols_mags <- colnames(mags_by_sites)
-
-for (1 in colmags) {
-  if (col1 == "sites") next
+for (i in 1:(n_mags - 1)) {
   
-  # Imprimir progreso
-  counter <- counter + 1
-  if (counter %% 100 == 0) 
+  magi <- mag_cols[i]
+  
+  if (i %% 100 == 0) {
     elapsed <- difftime(Sys.time(), start_time, units = "mins")
-    # percentage <- round((counter / ncol(motus_by_site)) * 100, 2)
-    
-    message("\n- Microbial lineages processed:", counter)
+    message("\n- Microbial lineages processed:", i)
     message("- Time: ", round(elapsed, 2), " mins ...")
-    
   }
   
-  for (col2 in colnames(bgcs_by_sites)) { 
-    if (col2 == "sites") next
+  for (j in (i + 1):n_mags) {
     
-    # create table of magi and bgcj
-    temp3 <- recreate_table(col1, col2, mags_by_sites, bgcs_by_sites)
+    magj <- mag_cols[j]
     
-    if (nrow(temp3) == 0) next 
+    comb <- recreate_table(magi, magj, mags_by_sites)
     
-    mag_sites <- sum(temp3[[col1]] > 0) 
-    bgc_sites <- sum(temp3[[col2]] > 0)
-    if (mag_sites < min_sites || bgc_sites < min_sites) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    if (nrow(comb) == 0) next 
     
-    q <- mag_sites / total_sites
-    p <- bgc_sites / total_sites
+    magi_sites <- sum(comb[[magi]] > 0) 
+    magj_sites <- sum(comb[[magj]] > 0)
+    
+    if (magi_sites < min_sites || magj_sites < min_sites) next
+    
+    q <- magi_sites / total_sites
+    p <- magj_sites / total_sites
+    
     pi_e <- p - 2*p*q + q
     pi_o <- p * q
-    ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
-                      (temp3[[col1]] > 0 & temp3[[col2]] == 0))
-    oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
-    m = sqrt(ex_sites)/oc_sites
-    # save all the combinations of MAGi and BGCj and other data
+    
+    ex_sites <- sum((comb[[magi]] == 0 & comb[[magj]] > 0) |
+                      (comb[[magi]] > 0 & comb[[magj]] == 0))
+    oc_sites <- sum((comb[[magi]] > 0) & 
+                      (comb[[magj]] > 0))
+    
     cases_list[[length(cases_list) + 1]] <- list(
-      # names  
-      Mags = col1, 
-      Bgcs = col2,
-      # sites of mags and bgcs  
-      mags_sites = mag_sites, 
-      bgcs_sites = bgc_sites,
-      # patterns 
+      MAGi = magi,
+      MAGj = magj,
+      mag1_sites = magi_sites,
+      mag2_sites = magj_sites,
       ex_sites = ex_sites,
       oc_sites = oc_sites,
-      # probs
       q = q,
       p = p,
       pi_exclusion = pi_e,
       pi_occurrence = pi_o,
-      # p-values
-      pvalue_e = 1-pbinom(ex_sites, total_sites, pi_e),
-      pvalue_o = 1-pbinom(oc_sites, total_sites, pi_o)
+      pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
+      pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
     )
   }
 }
 message("\n DONE :)")
 
-
 # list to data frame
 message("\n Preparing output, please wait ...")
 cases <- bind_rows(cases_list)
-num_cases <- nrow(cases)
-
-# filter interactions where the BGC is in the Genome
-meta_bgcs <- meta_bgcs %>%
-  left_join(meta_mags %>% select(Genome, all_of(mag_lineage)), by = "Genome") # add lineage to bgc table by genome
-
-cases <- cases %>% 
-  anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
-filt_cases <- num_cases - nrow(cases)
-
-message("\n NOTE:",filt_cases, " cases where the BGC is in the genome were discarded")
 
 # Correcting multiple testing FDR
 

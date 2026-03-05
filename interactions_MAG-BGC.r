@@ -149,7 +149,6 @@ for (col1 in colnames(mags_by_sites)) {
     ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
                       (temp3[[col1]] > 0 & temp3[[col2]] == 0))
     oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
-    m = sqrt(ex_sites)/oc_sites
     # save all the combinations of MAGi and BGCj and other data
     cases_list[[length(cases_list) + 1]] <- list(
       # names  
