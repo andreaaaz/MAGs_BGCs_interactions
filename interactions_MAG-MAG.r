@@ -1,7 +1,7 @@
 ################################################
 ### Identifying interactions MAG-MAG ##########
 ## Andrea Zermeño Díaz #########################
-# february-2026 ################################
+# march-2026 ################################
 
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
@@ -41,7 +41,7 @@ recreate_table <- function(mag1, mag2, m_by_sites) {
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
-  make_option(c("-i", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-i", "--indir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)")
 )
@@ -161,8 +161,8 @@ exclusion <- cases %>%
 
 # save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
-write.csv(occurrence, file = paste0(opt$outdir, 'oc_cases.csv'), row.names = FALSE)
-write.csv(exclusion, file = paste0(opt$outdir, 'ex_cases.csv'), row.names = FALSE)
+write.csv(occurrence, file = paste0(opt$outdir, 'oc_filt.csv'), row.names = FALSE)
+write.csv(exclusion, file = paste0(opt$outdir, 'ex_filt.csv'), row.names = FALSE)
 
 message("\n Output saved")
 
