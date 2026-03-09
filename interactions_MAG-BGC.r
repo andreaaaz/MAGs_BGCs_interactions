@@ -62,7 +62,7 @@ option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
-  make_option(c("-i", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-i", "--indirdir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)")
 )
@@ -74,7 +74,7 @@ min_sites <- opt$minimum_sites
 temp_r <- opt$temp
 
 # Run script
-# Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
+# Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -t global -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
 # -o /mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/
 
 message("\n Preparing input, please wait ...")
@@ -204,8 +204,8 @@ exclusion <- cases %>%
 
 # save the produced tables
 write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
-write.csv(occurrence, file = paste0(opt$outdir, 'oc_cases.csv'), row.names = FALSE)
-write.csv(exclusion, file = paste0(opt$outdir, 'ex_cases.csv'), row.names = FALSE)
+write.csv(occurrence, file = paste0(opt$outdir, 'oc_filt.csv'), row.names = FALSE)
+write.csv(exclusion, file = paste0(opt$outdir, 'ex_filt.csv'), row.names = FALSE)
 
 message("\n Output saved")
 
