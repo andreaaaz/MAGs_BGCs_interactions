@@ -1,0 +1,106 @@
+Mar-10 00:41:36.392 [main] DEBUG nextflow.cli.Launcher - $> nextflow run pipeline.nf --indir /mnt/data/sur/users/azermeno/data/metadata/ --outdir /mnt/data/sur/users/azermeno/exp/2026-interactions/ --microbial_lineage mOTUs_Species_Cluster --bgc_groups gcc
+Mar-10 00:41:36.583 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 25.10.4
+Mar-10 00:41:36.604 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/azermeno/.nextflow/plugins; core-plugins: nf-amazon@3.4.4,nf-azure@1.20.2,nf-cloudcache@0.5.0,nf-codecommit@0.5.0,nf-console@1.3.0,nf-google@1.23.5,nf-k8s@1.2.2,nf-tower@1.17.5,nf-wave@1.16.1
+Mar-10 00:41:36.627 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Mar-10 00:41:36.628 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Mar-10 00:41:36.631 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Mar-10 00:41:36.645 [main] DEBUG nextflow.util.RetryConfig - Missing nextflow session - using default retry config
+Mar-10 00:41:36.861 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Mar-10 00:41:36.941 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Mar-10 00:41:36.941 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+Mar-10 00:41:36.957 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/azermeno/.nextflow/secrets/store.json
+Mar-10 00:41:36.967 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@58a4a74d] - activable => nextflow.secret.LocalSecretsProvider@58a4a74d
+Mar-10 00:41:36.969 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+Mar-10 00:41:36.985 [main] DEBUG nextflow.cli.CmdRun - Launching `pipeline.nf` [mad_meucci] DSL2 - revision: 038b29633f
+Mar-10 00:41:37.052 [main] DEBUG nextflow.Session - Session UUID: ee1f09f5-9e00-4986-81e8-0ae11689e1e9
+Mar-10 00:41:37.053 [main] DEBUG nextflow.Session - Run name: mad_meucci
+Mar-10 00:41:37.053 [main] DEBUG nextflow.Session - Executor pool size: 28
+Mar-10 00:41:37.063 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Mar-10 00:41:37.070 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Mar-10 00:41:37.136 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 25.10.4 build 11173
+  Created: 10-02-2026 15:17 UTC (09:17 CDT)
+  System: Linux 5.14.0-503.23.2.el9_5.x86_64
+  Runtime: Groovy 4.0.28 on OpenJDK 64-Bit Server VM 17.0.10+7
+  Encoding: UTF-8 (UTF-8)
+  Process: 3636294@node12.cluster [10.1.1.12]
+  CPUs: 28 - Mem: 251.7 GB (118.7 GB) - Swap: 0 (0)
+Mar-10 00:41:37.168 [main] DEBUG nextflow.Session - Work-dir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work [nfs]
+Mar-10 00:41:37.168 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/bin
+Mar-10 00:41:37.176 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Mar-10 00:41:37.186 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
+Mar-10 00:41:37.189 [main] DEBUG nextflow.Session - Observer factory (v2): DefaultObserverFactory
+Mar-10 00:41:37.233 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Mar-10 00:41:37.243 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 29; maxThreads: 1000
+Mar-10 00:41:37.408 [main] DEBUG nextflow.Session - Session start
+Mar-10 00:41:37.963 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Mar-10 00:41:38.102 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Mar-10 00:41:38.103 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Mar-10 00:41:38.113 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Mar-10 00:41:38.120 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=28; memory=251.7 GB; capacity=28; pollInterval=100ms; dumpInterval=5m
+Mar-10 00:41:38.123 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Mar-10 00:41:38.159 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'MAG_BGC': maxForks=0; fair=false; array=0
+Mar-10 00:41:38.209 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Mar-10 00:41:38.209 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Mar-10 00:41:38.210 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'MAG_MAG': maxForks=0; fair=false; array=0
+Mar-10 00:41:38.213 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: MAG_MAG, MAG_BGC
+Mar-10 00:41:38.215 [main] DEBUG nextflow.Session - Igniting dataflow network (3)
+Mar-10 00:41:38.216 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > MAG_BGC
+Mar-10 00:41:38.217 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > MAG_MAG
+Mar-10 00:41:38.218 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_d26e863d52071bdb: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/pipeline.nf
+Mar-10 00:41:38.218 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+Mar-10 00:41:38.218 [main] DEBUG nextflow.Session - Session await
+Mar-10 00:41:38.447 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.449 [Task submitter] INFO  nextflow.Session - [a2/3ea8ba] Submitted process > MAG_MAG (low)
+Mar-10 00:41:38.473 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.474 [Task submitter] INFO  nextflow.Session - [f2/b7ff6a] Submitted process > MAG_MAG (global)
+Mar-10 00:41:38.496 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.496 [Task submitter] INFO  nextflow.Session - [c7/b97f9b] Submitted process > MAG_BGC (high)
+Mar-10 00:41:38.517 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.517 [Task submitter] INFO  nextflow.Session - [6e/e00996] Submitted process > MAG_BGC (low)
+Mar-10 00:41:38.538 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.538 [Task submitter] INFO  nextflow.Session - [a2/fdba29] Submitted process > MAG_MAG (mid)
+Mar-10 00:41:38.558 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.559 [Task submitter] INFO  nextflow.Session - [2a/c8a3ab] Submitted process > MAG_MAG (high)
+Mar-10 00:41:38.580 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.580 [Task submitter] INFO  nextflow.Session - [c6/bec9c5] Submitted process > MAG_BGC (global)
+Mar-10 00:41:38.601 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Mar-10 00:41:38.601 [Task submitter] INFO  nextflow.Session - [ca/56a86d] Submitted process > MAG_BGC (mid)
+Mar-10 00:45:07.256 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: MAG_MAG (mid); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/a2/fdba29bae965ef99035eb8dd9db85c]
+Mar-10 00:45:07.257 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Mar-10 00:45:07.311 [TaskFinalizer-1] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'PublishDir' minSize=10; maxSize=84; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Mar-10 00:45:29.122 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: MAG_MAG (low); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/a2/3ea8ba732e8256432acd5d93fd1db9]
+Mar-10 00:45:36.037 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 7; name: MAG_MAG (high); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/2a/c8a3ab9b4bf59bcd425bdc7879b4e9]
+Mar-10 00:46:36.990 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 6; name: MAG_BGC (mid); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/ca/56a86dea9bb840dc9dd12c16e25b02]
+Mar-10 00:46:38.292 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 4 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+~> TaskHandler[id: 8; name: MAG_BGC (high); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c7/b97f9b430e00f5ee5841c7f17ff39f]
+~> TaskHandler[id: 4; name: MAG_BGC (low); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/6e/e00996aaba0f3a062ddaf5449b9fcb]
+~> TaskHandler[id: 2; name: MAG_BGC (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c6/bec9c536288037b3f0fd635ee5edf7]
+Mar-10 00:47:16.608 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 8; name: MAG_BGC (high); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c7/b97f9b430e00f5ee5841c7f17ff39f]
+Mar-10 00:48:11.049 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: MAG_BGC (low); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/6e/e00996aaba0f3a062ddaf5449b9fcb]
+Mar-10 00:51:38.316 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 2 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+~> TaskHandler[id: 2; name: MAG_BGC (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c6/bec9c536288037b3f0fd635ee5edf7]
+Mar-10 00:56:38.320 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 2 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+~> TaskHandler[id: 2; name: MAG_BGC (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c6/bec9c536288037b3f0fd635ee5edf7]
+Mar-10 01:01:38.321 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 2 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+~> TaskHandler[id: 2; name: MAG_BGC (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c6/bec9c536288037b3f0fd635ee5edf7]
+Mar-10 01:03:00.733 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: MAG_BGC (global); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/c6/bec9c536288037b3f0fd635ee5edf7]
+Mar-10 01:06:38.376 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 1 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+Mar-10 01:11:38.467 [Task monitor] DEBUG n.processor.TaskPollingMonitor - !! executor local > tasks to be completed: 1 -- submitted tasks are shown below
+~> TaskHandler[id: 1; name: MAG_MAG (global); status: RUNNING; exit: -; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+Mar-10 01:13:57.518 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: MAG_MAG (global); status: COMPLETED; exit: 0; error: -; workDir: /mnt/data/sur/users/azermeno/src/MAGs_BGCs_interactions/work/f2/b7ff6af299b2c7db1b70886b13db24]
+Mar-10 01:13:57.563 [main] DEBUG nextflow.Session - Session await > all processes finished
+Mar-10 01:13:57.618 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Mar-10 01:13:57.618 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Mar-10 01:13:57.621 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'TaskFinalizer' shutdown completed (hard=false)
+Mar-10 01:13:57.622 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'PublishDir' shutdown completed (hard=false)
+Mar-10 01:13:57.628 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=8; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=1h 22m 7s; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=8; peakCpus=8; peakMemory=0; ]
+Mar-10 01:13:57.840 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Mar-10 01:13:57.925 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
+Mar-10 01:13:57.925 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
