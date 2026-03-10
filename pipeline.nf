@@ -11,7 +11,7 @@ params.temps = ['global','low','mid','high']
 
 process MAG_BGC {
 
-    tag temp
+    tag "$temp"
 
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
@@ -23,7 +23,7 @@ process MAG_BGC {
 
     script:
     """
-    Rscript interactions_MAG-BGC.r \
+    Rscript ${projectDir}/interactions_MAG-BGC.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -t ${temp} \
@@ -35,7 +35,7 @@ process MAG_BGC {
 
 process MAG_MAG {
         
-    tag temp
+    tag "$temp"
         
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.microbial_lineage}/${temp}/", mode: 'copy'
     
@@ -47,7 +47,7 @@ process MAG_MAG {
 
     script:
     """
-    Rscript interactions_MAG-MAG.r \
+    Rscript ${projectDir}/interactions_MAG-MAG.r \
         -m ${params.microbial_lineage} \
         -t ${temp} \
         -i ${params.indir} \
