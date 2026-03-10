@@ -62,7 +62,7 @@ option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
-  make_option(c("-i", "--indirdir"), type="character", help="Working directory"),
+  make_option(c("-i", "--indir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)")
 )
@@ -79,9 +79,9 @@ temp_r <- opt$temp
 
 message("\n Preparing input, please wait ...")
 
-meta_mags <- read.csv(file = paste0(opt$workdir, 'metadata.csv'), header = TRUE)
-meta_bgcs <- read.csv(file = paste0(opt$workdir, 'bgcs_metadata.csv'), header = TRUE)
-meta_sites <- read.csv(file = paste0(opt$workdir, 'meta_sites.csv'), header = TRUE)
+meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
+meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
+meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE)
 
 ##### TEMPERATURE ######
 
