@@ -72,9 +72,9 @@ fam_gcf <- read.csv(file = '~/2026-interactions/fam_gcf/all_cases.csv', header =
 fam_gcc <- read.csv(file = '~/2026-interactions/fam_gcc/all_cases.csv', header = TRUE)
 gen_gcf <- read.csv(file = '~/2026-interactions/gen_gcf/all_cases.csv', header = TRUE)
 gen_gcc <- read.csv(file = '~/2026-interactions/gen_gcc/all_cases.csv', header = TRUE)
-meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
-meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
-meta_sites <- read.csv("~/MAGs_BGCs_interactions/meta_sites.csv")
+meta_mags <- read.csv("~/metadata/metadata.csv")
+meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
+meta_sites <- read.csv("~/metadata/meta_sites.csv")
 
 # create the plots
 plots <- list(

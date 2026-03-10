@@ -43,7 +43,7 @@ option_list <- list(
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
   make_option(c("-i", "--indir"), type="character", help="Working directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)")
+  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -61,15 +61,17 @@ meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE)
 
 ##### TEMPERATURE ######
+temp_range <- NULL
 
 # definir el rango
-if (temp_r == "low") temp_r <- c(-2, 9)
-if (temp_r == "mid") temp_r <- c(10, 20)
-if (temp_r == "high") temp_r <- c(21, 35)
+if (temp_r == "low") temp_range <- c(-2, 9)
+if (temp_r == "mid") temp_range <- c(10, 20)
+if (temp_r == "high") temp_range <- c(21, 35)
 if (temp_r != "global") {
   meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
-    filter(between(temperature_..C., temp_r[1], temp_r[2]))
+    filter(between(temperature_..C., temp_range[1], temp_range[2]))
 }
+
 # filtrar MAGs por sitios
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
