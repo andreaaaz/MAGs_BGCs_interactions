@@ -28,7 +28,7 @@ process MAG_BGC {
         -b ${params.bgc_groups} \
         -t ${temp} \
         -i ${params.indir} \
-        -o .
+        -o ./
     """
 }
 
@@ -51,7 +51,7 @@ process MAG_MAG {
         -m ${params.microbial_lineage} \
         -t ${temp} \
         -i ${params.indir} \
-        -o .
+        -o ./
     """
 }   
 
