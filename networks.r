@@ -1,160 +1,79 @@
 ################################################
-#### NETWORKS #######################
+#### NETWORKS MAGs-BGCs ##################################
 ## Andrea Zermeño Díaz #########################
 # march-2026 #################################
 
 # libraries
-library(tidyverse)
-library(ggplot2)
+suppressPackageStartupMessages(library(tidyverse))
+library(optparse)
 library(igraph)
-library(RCy3)
 library(paletteer)
 
-
-# --- mOTUs - GCC co-ocurrencia
-
-oc <- motu_gcc$occurrence
-
-### 1. Colores por grupo representativo ----
-rep_bgcs <- meta_bgcs %>%
-  group_by(gcc, products) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
-  select(gcc, rep_bgc = products) %>%
-  rename(id = gcc)
-rep_mags <- meta_mags %>%
-  group_by(mOTUs_Species_Cluster, family) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
-  select(mOTUs_Species_Cluster, rep_mag = family) %>%
-  rename(id = mOTUs_Species_Cluster)
-
-### 2. Crear nodos y aristas ----
-nodes <- data.frame(
-  id = unique(c(oc$Mags, oc$Bgcs)),
-  type = c(rep("MAG", length(unique(oc$Mags))),
-           rep("BGC", length(unique(oc$Bgcs))))
+# Args
+option_list <- list(
+  make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
+  make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-w", "--workdir"), type="character", help = "Working directory")
 )
-edges <- oc %>%
-  rename(source = Mags, target = Bgcs, weight = fdr_pval_o)
+opt <- parse_args(OptionParser(option_list=option_list))
 
-### 3. Crear grafo y calcular grados ----
+mag_lineage <- opt$microbial_lineage
+bgc_group <- opt$bgc_groups
+
+# Loading metadata and cases
+meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
+meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
+
+cases <- read.csv(file= paste0(opt$workdir, 'oc_filt.csv'), header = TRUE)
+
+#----------------
+#### MAG-BGC ####
+#----------------
+
+### Nodes and Edges ----
+nodes <- tibble(
+  id = unique(c(cases$Mags, cases$Bgcs)),
+  type = ifelse(
+    id %in% cases$Mags,
+    "MAG",
+    "BGC"))
+
+edges <- cases %>%
+  rename(source = Mags, 
+         target = Bgcs, 
+         weight = fdr_pval_o)
+
+### Graph and degree ----
+
 g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
 nodes$degree <- degree(g)
 
-### 4. Añadir metadatos ----
+### Add representative groups ----
+
+rep_bgcs <- meta_bgcs %>%
+  group_by(.data[[bgc_group]], products) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  slice_max(order_by = n, n = 1) %>%
+  select(id = all_of(bgc_group), rep_bgc = products)
+
+rep_mags <- meta_mags %>%
+  group_by(.data[[mag_lineage]], family) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  slice_max(order_by = n, n = 1) %>%
+  select(id = all_of(mag_lineage), rep_mag = family)
+
 nodes <- nodes %>%
   left_join(rep_mags, by = "id") %>%
   left_join(rep_bgcs, by = "id") %>%
   mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc))
 
-### 5. Seleccionar top grupos por grado medio ----
+### Top nodes ----
 top_mag_nodes <- nodes %>%
   filter(type == "MAG") %>%
   arrange(desc(degree)) %>%
-  slice_head(n = 13)
-top_bgc_nodes <- nodes %>%
-  filter(type == "BGC") %>% 
-  arrange(desc(degree)) %>%
-  slice_head(n = 14)
-top_mag_groups <- unique(top_mag_nodes$color_group)
-top_bgc_groups <- unique(top_bgc_nodes$color_group)
-
-### 6. Crear red en Cytoscape ----
-cytoscapePing()
-createNetworkFromDataFrames(
-  nodes = nodes,
-  edges = edges,
-  title = "oc mOTUs-GCCs",
-  collection = "Interacciones MAGs-BGCs"
-)
-
-### 7. Asignar forma de nodos ----
-setNodeShapeMapping("type", c("MAG", "BGC"), c("ELLIPSE", "DIAMOND"))
-
-### 8. Paletas de colores ----
-mag_colors <- substr(
-  as.vector(paletteer::paletteer_d(
-    palette = "ggthemes::calc",
-    n = length(top_mag_groups)
-  )),
-  1, 7
-)
-bgc_colors <- substr(
-  as.vector(paletteer::paletteer_d(
-    palette = "ggthemes::gdoc",
-    n = length(top_bgc_groups)
-  )),
-  1, 7
-)
-
-### 9. Asignar color a nodos ----
-nodes <- nodes %>%
-  mutate(color = case_when(
-    type == "MAG" & color_group %in% top_mag_groups ~ 
-      mag_colors[match(color_group, top_mag_groups)],
-    type == "BGC" & color_group %in% top_bgc_groups ~ 
-      bgc_colors[match(color_group, top_bgc_groups)],
-    TRUE ~ "darkgrey"
-  ))
-
-### 10. Aplicar colores en Cytoscape ----
-setNodeColorBypass(
-  node.names = nodes$id,
-  new.colors = nodes$color
-)
-
-# guia leyenda
-legend_df <- tibble(
-  Tipo = c(rep("MAG", length(top_mag_groups)),
-           rep("BGC", length(top_bgc_groups))),
-  Grupo = c(top_mag_groups, top_bgc_groups),
-  Color = c(mag_colors, bgc_colors)
-)
-
-
-# ---- Exclusion mOTUs-GCCs -----
-
-ex <- motu_gcc$exclusion
-
-### 1. Colores por grupo representativo ----
-rep_bgcs <- meta_bgcs %>%
-  group_by(gcc, products) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
-  select(gcc, rep_bgc = products) %>%
-  rename(id = gcc)
-rep_mags <- meta_mags %>%
-  group_by(mOTUs_Species_Cluster, family) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
-  select(mOTUs_Species_Cluster, rep_mag = family) %>%
-  rename(id = mOTUs_Species_Cluster)
-
-### 2. Crear nodos y aristas ----
-nodes <- data.frame(
-  id = unique(c(ex$Mags, ex$Bgcs)),
-  type = c(rep("MAG", length(unique(ex$Mags))),
-           rep("BGC", length(unique(ex$Bgcs))))
-)
-edges <- ex %>%
-  rename(source = Mags, target = Bgcs, weight = fdr_pval_e)
-
-### 3. Crear grafo y calcular grados ----
-g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
-nodes$degree <- degree(g)
-
-### 4. Añadir metadatos ----
-nodes <- nodes %>%
-  left_join(rep_mags, by = "id") %>%
-  left_join(rep_bgcs, by = "id") %>%
-  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc))
-
-### 5. Seleccionar top grupos por grado medio ----
-top_mag_nodes <- nodes %>%
-  filter(type == "MAG") %>%
-  arrange(desc(degree)) %>%
-  slice_head(n = 2)
+  slice_head(n = 12)
 top_bgc_nodes <- nodes %>%
   filter(type == "BGC") %>% 
   arrange(desc(degree)) %>%
@@ -162,58 +81,34 @@ top_bgc_nodes <- nodes %>%
 top_mag_groups <- unique(top_mag_nodes$color_group)
 top_bgc_groups <- unique(top_bgc_nodes$color_group)
 
-### 6. Crear red en Cytoscape ----
-createNetworkFromDataFrames(
-  nodes = nodes,
-  edges = edges,
-  title = "mOTUs-GCCs",
-  collection = "Interacciones MAGs-BGCs"
-)
-
-### 7. Asignar forma de nodos ----
-setNodeShapeMapping("type", c("MAG", "BGC"), c("ELLIPSE", "DIAMOND"))
-
-### 8. Paletas de colores ----
+## Colors for top nodes
 mag_colors <- substr(
   as.vector(paletteer::paletteer_d(
     palette = "ggthemes::calc",
-    n = length(top_mag_groups)
-  )),
-  1, 7
-)
+    n = length(top_mag_groups))), 1, 7)
 bgc_colors <- substr(
   as.vector(paletteer::paletteer_d(
     palette = "ggthemes::gdoc",
-    n = length(top_bgc_groups)
-  )),
-  1, 7
-)
+    n = length(top_bgc_groups))), 1, 7)
 
-### 9. Asignar color a nodos ----
 nodes <- nodes %>%
   mutate(color = case_when(
     type == "MAG" & color_group %in% top_mag_groups ~ 
       mag_colors[match(color_group, top_mag_groups)],
     type == "BGC" & color_group %in% top_bgc_groups ~ 
       bgc_colors[match(color_group, top_bgc_groups)],
-    TRUE ~ "darkgrey"
-  ))
+    TRUE ~ "darkgrey"))
 
-### 10. Aplicar colores en Cytoscape ----
-setNodeColorBypass(
-  node.names = nodes$id,
-  new.colors = nodes$color
-)
 
-# guia leyenda
-legend_df <- tibble(
-  Tipo = c(rep("MAG", length(top_mag_groups)),
-           rep("BGC", length(top_bgc_groups))),
-  Grupo = c(top_mag_groups, top_bgc_groups),
-  Color = c(mag_colors, bgc_colors)
-)
+### Crear red en Cytoscape ----
+# cytoscapePing()
+# createNetworkFromDataFrames(
+#  nodes = nodes,
+#  edges = edges,
+#  title = "oc mOTUs-GCCs",
+#  collection = "Interacciones MAGs-BGCs")
 
-# ---- Sub y sobre abundancia productos BGCs
+### Sub y sobre abundancia productos BGCs  ---
 
 # esperados (dataset global)
 esp <- meta_bgcs %>%
@@ -221,42 +116,88 @@ esp <- meta_bgcs %>%
   mutate(rel_abundance = n / sum(n)) %>%
   arrange(desc(rel_abundance)) %>%
   rename(product = products, expected = rel_abundance)
-
 # observados 
-oc <- oc %>%
+cases <- cases %>%
   left_join(rep_bgcs, by = c("Bgcs"="id")) #asignar productos a gccs de la red
-obs <- oc %>%
+obs <- cases %>%
   count(rep_bgc) %>%
   mutate(rel_abundance = n / sum(n)) %>%
-  arrange(desc(rel_abundance))%>%
+  arrange(desc(rel_abundance)) %>%
   rename(product = rep_bgc, observed = rel_abundance)
+
 enrichment <- obs %>%
   left_join(esp, by = "product") %>%
   mutate(log2_enrichment = log2(observed / expected)) %>%
-  arrange(desc(log2_enrichment)) %>%
-  left_join(legend_df, by = c("product" = "Grupo")) %>%
-  mutate(
-    fill_color = ifelse(is.na(Color), "grey", Color)  
-  )
+  arrange(desc(log2_enrichment)) 
 
-# grafica
-
+# grafica 
 enrichment_plot <- enrichment %>%
   ggplot(aes(
     x = log2_enrichment,
     y = reorder(product, log2_enrichment),
-    fill = fill_color
   )) +
   geom_col() +
   geom_vline(xintercept = 0, linetype = "dashed") +
-  scale_fill_identity() +
   theme_minimal() +
   labs(
     x = expression(Log[2](Observed/Expected)),
     y = "Biosynthetic product"
   )
-ggsave("enrichment.png", plot = enrichment_plot, width = 20, height = 10, units = "cm")
+
+### Save data & graphs ----
+write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
+write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
+ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
+
+#----------------
+#### MAG-BGC-MAG ####
+#----------------
+
+### Edges ----
+# production edges (MAG -> BGC)
+production_edges <- meta_bgcs %>%
+  select(source = Genome, target = BGC) %>%
+  distinct() %>%
+  mutate(weight = NA, edge_type = "production")
+
+# interaction edges (BGC -> MAG)
+interaction_edges <- cases %>%
+  rename(source = Bgcs, target = Mags, weight = fdr_pval_o) %>%
+  mutate(edge_type = "interaction")
+# Combine edges
+edges_mbm <- bind_rows(production_edges, interaction_edges)
+
+### Nodes ----
+nodes_mbm <- tibble(id = unique(c(edges_mbm$source, edges_mbm$target))) %>%
+  mutate(type = case_when(
+      id %in% cases$Mags ~ "MAG",
+      id %in% cases$Bgcs ~ "BGC",
+      TRUE ~ "unknown"))
+
+### Graph and degrees ----
+g_mbm <- graph_from_data_frame(d = edges_mbm, vertices = nodes_mbm, directed = TRUE)
+nodes_mbm$degree_in  <- degree(g_mbm, mode = "in")
+nodes_mbm$degree_out <- degree(g_mbm, mode = "out")
+nodes_mbm$degree_total <- degree(g_mbm, mode = "all")
+
+### Representative groups & colors ----
+nodes_mbm <- nodes_mbm %>%
+  left_join(rep_mags, by = "id") %>%
+  left_join(rep_bgcs, by = "id") %>%
+  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc))
+nodes_mbm <- nodes_mbm %>%
+  mutate(color = case_when(
+    type == "MAG" & color_group %in% top_mag_groups ~ 
+      mag_colors[match(color_group, top_mag_groups)],
+    type == "BGC" & color_group %in% top_bgc_groups ~ 
+      bgc_colors[match(color_group, top_bgc_groups)],
+    TRUE ~ "darkgrey"))
+
+### Save data ----
+write.csv(nodes, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
+write.csv(edges, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 
 
-
-
+#----------------
+#### MAG-MAG ####
+#----------------
