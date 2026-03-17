@@ -169,8 +169,7 @@ library(terra)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-oc<- motu_gcc$occurrence
-meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
+cases <- motu_gcc$occurrence
 example <- recreate_table("ref_mOTU_v25_05467", "gcc_22", mags_by_sites, bgcs_by_sites)
 
 #sitios con cordenadas

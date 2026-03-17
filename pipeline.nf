@@ -19,7 +19,8 @@ process MAG_BGC {
     val temp
 
     output:
-    path "*filt.csv"
+    path "*filt.csv", emit: filt
+    path "all_cases.csv", emit: cases
 
     script:
     """
@@ -43,7 +44,8 @@ process MAG_MAG {
     val temp
 
     output:
-    path "*filt.csv"
+    path "*filt.csv", emit: filt
+    path "all_cases.csv", emit: cases
 
     script:
     """
@@ -55,10 +57,24 @@ process MAG_MAG {
     """
 }   
 
+process networks {
+    tag
+
+    publishDir "", mode: "copy"
+
+    input:
+    output:
+    script:
+    """
+    Rscript 
+    """
+
+}
+
 
 workflow {
     
-    temp_ch = Channel.from(params.temps)
+    temp_ch = Channel.of(params.temps)
     
     MAG_BGC(temp_ch)
     MAG_MAG(temp_ch)
