@@ -24,3 +24,6 @@ Rscript workflow_interactions.r -m mOTUs_Species_Cluster -b gcf -s 5 -i /home/us
 ```
  
 
+## Acknowledgments
+
+The work in this repository was supported by DGAPA-PAPIIT grant IA200824

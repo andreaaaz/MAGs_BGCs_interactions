@@ -1,10 +1,10 @@
-################################################
-#### NETWORKS MAGs-BGCs ##################################
-## Andrea Zermeño Díaz #########################
-# march-2026 #################################
+#######################################
+#### NETWORKS MAGs-BGCs ###############
+## Andrea Zermeño Díaz ################
+# march-2026 ##########################
 
-# libraries
 suppressPackageStartupMessages(library(tidyverse))
+library(ggplot2)
 library(optparse)
 library(igraph)
 library(paletteer)
@@ -25,7 +25,6 @@ bgc_group <- opt$bgc_groups
 # Loading metadata and cases
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
-
 cases <- read.csv(file= paste0(opt$workdir, 'oc_filt.csv'), header = TRUE)
 
 #----------------
@@ -39,19 +38,16 @@ nodes <- tibble(
     id %in% cases$Mags,
     "MAG",
     "BGC"))
-
 edges <- cases %>%
-  rename(source = Mags, 
-         target = Bgcs, 
+  rename(source = Bgcs, 
+         target = Mags, 
          weight = fdr_pval_o)
 
 ### Graph and degree ----
-
 g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
 nodes$degree <- degree(g)
 
 ### Add representative groups ----
-
 rep_bgcs <- meta_bgcs %>%
   group_by(.data[[bgc_group]], products) %>%
   summarise(n = n(), .groups = "drop_last") %>%
@@ -67,7 +63,8 @@ rep_mags <- meta_mags %>%
 nodes <- nodes %>%
   left_join(rep_mags, by = "id") %>%
   left_join(rep_bgcs, by = "id") %>%
-  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc))
+  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
+  select(-rep_bgc, -rep_mag)
 
 ### Top nodes ----
 top_mag_nodes <- nodes %>%
@@ -149,9 +146,9 @@ write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
 ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
 
-#----------------
+#--------------------
 #### MAG-BGC-MAG ####
-#----------------
+#--------------------
 
 ### Edges ----
 # production edges (MAG -> BGC)
@@ -170,9 +167,9 @@ edges_mbm <- bind_rows(production_edges, interaction_edges)
 ### Nodes ----
 nodes_mbm <- tibble(id = unique(c(edges_mbm$source, edges_mbm$target))) %>%
   mutate(type = case_when(
-      id %in% cases$Mags ~ "MAG",
-      id %in% cases$Bgcs ~ "BGC",
-      TRUE ~ "unknown"))
+    id %in% cases$Mags ~ "MAG",
+    id %in% cases$Bgcs ~ "BGC",
+    TRUE ~ "unknown"))
 
 ### Graph and degrees ----
 g_mbm <- graph_from_data_frame(d = edges_mbm, vertices = nodes_mbm, directed = TRUE)
@@ -196,7 +193,6 @@ nodes_mbm <- nodes_mbm %>%
 ### Save data ----
 write.csv(nodes, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
-
 
 #----------------
 #### MAG-MAG ####
