@@ -22,5 +22,7 @@ Example of a command:
 ```bash
 Rscript workflow_interactions.r -m mOTUs_Species_Cluster -b gcf -s 5 -i /home/user/MAGs_BGCs_interactions/ -o /home/user/exp/2025-interacions/
 ```
- 
 
+## Acknowledgments
+
+The work in this repository was supported by DGAPA-PAPIIT grant IA200824
