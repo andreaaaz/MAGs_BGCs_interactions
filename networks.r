@@ -28,20 +28,15 @@ meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TR
 cases <- read.csv(file= paste0(opt$workdir, 'oc_filt.csv'), header = TRUE)
 
 #----------------
-#### MAG-BGC ####
+#### MAG<-BGC ####
 #----------------
 
 ### Nodes and Edges ----
 nodes <- tibble(
   id = unique(c(cases$Mags, cases$Bgcs)),
-  type = ifelse(
-    id %in% cases$Mags,
-    "MAG",
-    "BGC"))
+  type = ifelse(id %in% cases$Mags, "MAG", "BGC"))
 edges <- cases %>%
-  rename(source = Bgcs, 
-         target = Mags, 
-         weight = fdr_pval_o)
+  rename(source = Bgcs, target = Mags, weight = fdr_pval_o)
 
 ### Graph and degree ----
 g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
@@ -146,30 +141,44 @@ write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
 ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
 
-#--------------------
-#### MAG-BGC-MAG ####
-#--------------------
+#-----------------------
+#### MAG->BGC->MAG ####
+#-----------------------
+
+# Connect 
+bgc_to_motu <- meta_bgcs %>%
+  select(BGC, Genome, !!bgc_group) %>%
+  left_join(meta_mags %>% select(Genome, !!mag_lineage), by = "Genome") %>%
+  rename(bgc_id = BGC, gcc_id = !!bgc_group, motu_id = !!mag_lineage) %>%
+  distinct()
+gcc_in_cases <- unique(cases$Bgcs) # keep only the GCCs that are in the network
+
 
 ### Edges ----
 # production edges (MAG -> BGC)
-production_edges <- meta_bgcs %>%
-  select(source = Genome, target = BGC) %>%
+production_edges <- bgc_to_motu %>%
+  filter(!is.na(motu_id), !is.na(gcc_id)) %>%
+  filter(gcc_id %in% gcc_in_cases) %>%
+  select(source = motu_id, target = gcc_id) %>%
   distinct() %>%
-  mutate(weight = NA, edge_type = "production")
+  mutate(weight = 1, type = "production")
 
 # interaction edges (BGC -> MAG)
-interaction_edges <- cases %>%
-  rename(source = Bgcs, target = Mags, weight = fdr_pval_o) %>%
-  mutate(edge_type = "interaction")
+interaction_edges <- edges %>%
+  mutate(type = "interaction")
+
 # Combine edges
 edges_mbm <- bind_rows(production_edges, interaction_edges)
 
+
 ### Nodes ----
-nodes_mbm <- tibble(id = unique(c(edges_mbm$source, edges_mbm$target))) %>%
-  mutate(type = case_when(
-    id %in% cases$Mags ~ "MAG",
-    id %in% cases$Bgcs ~ "BGC",
-    TRUE ~ "unknown"))
+nodes_mbm <- tibble(
+  id = unique(c(edges_mbm$source, edges_mbm$target))) %>%
+  mutate(
+    type = case_when(
+      id %in% meta_mags[[mag_lineage]] ~ "MAG",
+      id %in% meta_bgcs[[bgc_group]] ~ "BGC",
+      TRUE ~ "other"))
 
 ### Graph and degrees ----
 g_mbm <- graph_from_data_frame(d = edges_mbm, vertices = nodes_mbm, directed = TRUE)
@@ -181,7 +190,8 @@ nodes_mbm$degree_total <- degree(g_mbm, mode = "all")
 nodes_mbm <- nodes_mbm %>%
   left_join(rep_mags, by = "id") %>%
   left_join(rep_bgcs, by = "id") %>%
-  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc))
+  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
+  select(-rep_bgc, -rep_mag)
 nodes_mbm <- nodes_mbm %>%
   mutate(color = case_when(
     type == "MAG" & color_group %in% top_mag_groups ~ 
@@ -197,3 +207,9 @@ write.csv(edges, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 #----------------
 #### MAG-MAG ####
 #----------------
+
+
+
+
+
+
