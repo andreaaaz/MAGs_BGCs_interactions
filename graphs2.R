@@ -1,5 +1,5 @@
-meta_mags <- read.csv("~/metadata/metadata.csv")
-meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
+meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
+meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
 motu_gcc <- read.csv(file = '~/2026-interactions/motu_gcc/all_cases.csv', header = TRUE)
 correct <- function(df) {
   df <- df %>%
@@ -15,7 +15,6 @@ correct <- function(df) {
 }
 motu_gcc <- correct(motu_gcc)
 cases <- motu_gcc$occurrence
-
 ################################################
 #### ANALYSIS OF RESULTS #######################
 ## Andrea Zermeño Díaz #########################
@@ -90,9 +89,9 @@ fam_gcf <- read.csv(file = '~/2026-interactions/fam_gcf/all_cases.csv', header =
 fam_gcc <- read.csv(file = '~/2026-interactions/fam_gcc/all_cases.csv', header = TRUE)
 gen_gcf <- read.csv(file = '~/2026-interactions/gen_gcf/all_cases.csv', header = TRUE)
 gen_gcc <- read.csv(file = '~/2026-interactions/gen_gcc/all_cases.csv', header = TRUE)
-meta_mags <- read.csv("~/metadata/metadata.csv")
-meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
-meta_sites <- read.csv("~/metadata/meta_sites.csv")
+meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
+meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
+meta_sites <- read.csv("~/MAGs_BGCs_interactions/meta_sites.csv")
 
 # create the plots
 plots <- list(
@@ -187,7 +186,8 @@ library(terra)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-cases <- motu_gcc$occurrence
+oc<- motu_gcc$occurrence
+meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
 example <- recreate_table("ref_mOTU_v25_05467", "gcc_22", mags_by_sites, bgcs_by_sites)
 
 #sitios con cordenadas
