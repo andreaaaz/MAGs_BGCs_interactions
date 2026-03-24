@@ -24,7 +24,7 @@ process MAG_BGC {
 
     script:
     """
-    Rscript ${projectDir}/interactions_MAG-BGC.r \
+    Rscript ${projectDir}/MAGs_BGCs_interactions/interactions_MAG-BGC.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -t ${temp} \
@@ -49,7 +49,7 @@ process MAG_MAG {
 
     script:
     """
-    Rscript ${projectDir}/interactions_MAG-MAG.r \
+    Rscript ${projectDir}/MAGs_BGCs_interactions/interactions_MAG-MAG.r \
         -m ${params.microbial_lineage} \
         -t ${temp} \
         -i ${params.indir} \
@@ -60,10 +60,14 @@ process MAG_MAG {
 process networks {
     tag
 
-    publishDir "", mode: "copy"
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
     input:
+    val 
+
     output:
+    path 
+
     script:
     """
     Rscript 
@@ -80,3 +84,4 @@ workflow {
     MAG_MAG(temp_ch)
 
 }
+
