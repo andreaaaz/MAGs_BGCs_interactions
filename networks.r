@@ -201,15 +201,59 @@ nodes_mbm <- nodes_mbm %>%
     TRUE ~ "darkgrey"))
 
 ### Save data ----
-write.csv(nodes, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
-write.csv(edges, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
+write.csv(nodes_mbm, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
+write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 
 #----------------
 #### MAG-MAG ####
 #----------------
 
+### Edges ----
+# interaction: MAG <- BGC
+inter_mm <- interaction_edges %>%
+  select(MAG = target, BGC = source, weight = weight)
+# production: MAG -> BGC
+prod_mm <- production_edges %>%
+  select(MAG = source, BGC = target)
+# keep only MAGs
+edges_mm <- inter_mm %>%
+  inner_join(prod_mm, by = "BGC", relationship = "many-to-many") %>%
+  filter(MAG.x != MAG.y) %>%
+  transmute(source = MAG.y, target = MAG.x, weight = weight, bgc = BGC) 
 
+### obtain nodes from edges ----
+nodes_mm <- tibble(id = unique(c(edges_mm$source, edges_mm$target)))
+nodes_mm <- nodes_mm %>%
+  left_join(meta_mags %>%
+      select(id = all_of(mag_lineage), family) %>%
+      distinct(),
+    by = "id")
+nodes_mm <- nodes_mm %>%
+  distinct(id, .keep_all = TRUE)
 
+### add degrees ----
+g_mm <- graph_from_data_frame(d = edges_mm, vertices = nodes_mm, directed = TRUE)
+nodes_mm$degree_in  <- degree(g_mm, mode = "in")
+nodes_mm$degree_out <- degree(g_mm, mode = "out")
+nodes_mm$degree_total <- degree(g_mm, mode = "all")
 
+### top nodes and colors ----
+top_nodes <- nodes_mm %>% 
+  arrange(desc(degree_total)) %>%
+  slice_head(n = 12)
+top_families <- unique(top_nodes$family)
+motu_colors <- substr(
+  as.vector(paletteer::paletteer_d(
+    palette = "ggthemes::calc",
+    n = length(top_families))), 1, 7)
 
+nodes_mm <- nodes_mm %>%
+  mutate(color = case_when(
+    family %in% top_families ~ 
+      motu_colors[match(family, top_families)],
+    TRUE ~ "darkgrey"))
+
+### save data ----
+write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
+write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
 
