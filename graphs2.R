@@ -1,20 +1,8 @@
-meta_mags <- read.csv("~/MAGs_BGCs_interactions/metadata.csv")
-meta_bgcs <- read.csv("~/MAGs_BGCs_interactions/bgcs_metadata.csv")
-motu_gcc <- read.csv(file = '~/2026-interactions/motu_gcc/all_cases.csv', header = TRUE)
-correct <- function(df) {
-  df <- df %>%
-    mutate(
-      fdr_pval_e = p.adjust(pvalue_e, method = "BH"),
-      fdr_pval_o = p.adjust(pvalue_o, method = "BH")
-    )
-  
-  list(
-    exclusion = df %>% filter(fdr_pval_e < 0.05),
-    occurrence = df %>% filter(fdr_pval_o < 0.05)
-  )
-}
-motu_gcc <- correct(motu_gcc)
-cases <- motu_gcc$occurrence
+meta_mags <- read.csv("~/metadata/metadata.csv")
+meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
+
+cases <- read.csv("~/metadata/oc_filt.csv")
+real_cases <- read.csv("~/edges_mm.csv")
 ################################################
 #### ANALYSIS OF RESULTS #######################
 ## Andrea Zermeño Díaz #########################
