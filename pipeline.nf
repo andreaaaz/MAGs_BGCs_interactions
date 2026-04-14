@@ -20,7 +20,7 @@ process MAG_BGC {
 
     output:
     tuple val(temp), path("oc_filt.csv"), emit: oc_filt
-    path "*.csv", emit: all_csvs
+    path "*.csv"
 
     script:
     """
@@ -38,14 +38,14 @@ process MAG_MAG {
         
     tag "$temp"
         
-    publishDir "${params.outdir}/${params.microbial_lineage}_${params.microbial_lineage}/${temp}/", mode: 'copy'
+    publishDir "${params.outdir}/${params.microbial_lineage}/${temp}/", mode: 'copy'
     
     input:
     val temp
 
     output:
-    tuple 
- 
+    tuple val(temp), path("oc_filt.csv"), emit: oc_filt_mm
+    path "*.csv"
 
     script:
     """
@@ -57,6 +57,30 @@ process MAG_MAG {
     """
 }   
 
+process NETWORKS_MM {
+
+    tag "$temp"
+
+    publishDir "${params.outdir}/${params.microbial_lineage}/${temp}/", mode: 'copy'
+
+    input:
+    tuple val(temp), path(oc_file)
+
+    output:
+    tuple val(temp), path("edges_mm.csv"), emit: edges_mm
+    path "*"
+
+    script:
+    """
+    Rscript ${projectDir}/MAGs_BGCs_interactions/networks_mm.r \
+        -m ${params.microbial_lineage} \
+        -i ${params.indir} \
+        -f ${oc_file} \
+        -o ./
+    """
+
+}
+
 process NETWORKS_MB {
     
     tag "$temp"
@@ -64,7 +88,7 @@ process NETWORKS_MB {
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
     input:
-    tuple val(temp), path(oc_file)
+    tuple val(temp), path(oc_mb), path(edges_mm)
 
     output:
     path "*.csv"
@@ -74,8 +98,10 @@ process NETWORKS_MB {
     Rscript ${projectDir}/MAGs_BGCs_interactions/networks_mb.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
-        -f ${oc_file} \
-        -o ./
+        -i ${params.indir} \
+        -o ./ \
+        -f ${oc_mb} \
+        -d ${edges_mm} 
     """
 
 }
@@ -86,10 +112,14 @@ workflow {
     temp_ch = Channel.of(params.temps)
     
     mag_bgc_out = MAG_BGC(temp_ch)
-    
-    NETWORKS_MB(mag_bgc_out.oc_filt)
 
-    MAG_MAG(temp_ch)
+    mag_mag_out = MAG_MAG(temp_ch)
+    
+    networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
+
+    combined = mag_bgc_out.oc_filt.join(net_mm_out.edges_mm)
+
+    NETWORKS_MB(combined)
 
 }
 

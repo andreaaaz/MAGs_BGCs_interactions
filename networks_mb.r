@@ -13,20 +13,23 @@ library(paletteer)
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
-  make_option(c("-f", "--file_oc"), type="character", help="file with oc cases"),
-  make_option(c("-w", "--file_mm"), type="character", help="file with MAG-MAG interactions"),
-  make_option(c("-o", "--outdir"), type="character", help="Output directory")
+  make_option(c("-f", "--file_mb"), type="character", help="file with oc cases"),
+  make_option(c("-d", "--file_mm"), type="character", help="file with MAG-MAG interactions"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-i", "--indir"), type="character", help="Input directory")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
 mag_lineage <- opt$microbial_lineage
 bgc_group <- opt$bgc_groups
+cases_mb <- opt$file_mb
+cases_mm <- opt$file_mm
 
 # Loading metadata and cases
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
-cases <- opt$file_oc
-real_cases <- opt$file_mm
+cases <- read.csv(cases_mb)
+real_cases <- read.csv(cases_mm)
 
 #----------------
 #### MAG<-BGC ####

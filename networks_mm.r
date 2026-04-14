@@ -14,16 +14,15 @@ option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-w", "--workdir"), type="character", help = "Working directory")
+  make_option(c("-f", "--file"), type="character", help = "Working directory")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
-
 mag_lineage <- opt$microbial_lineage
+cases_file <- opt$file
 
 # Loading metadata and cases
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
-cases <- read.csv(file= paste0(opt$workdir, 'oc_filt.csv'), header = TRUE)
-
+cases <- read.csv(cases_file)
 
 ### Nodes and Edges ----
 
