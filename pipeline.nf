@@ -19,8 +19,8 @@ process MAG_BGC {
     val temp
 
     output:
-    path "*filt.csv", emit: filt
-    path "all_cases.csv", emit: cases
+    tuple val(temp), path("oc_filt.csv"), emit: oc_filt
+    path "*.csv", emit: all_csvs
 
     script:
     """
@@ -44,8 +44,8 @@ process MAG_MAG {
     val temp
 
     output:
-    path "*filt.csv", emit: filt
-    path "all_cases.csv", emit: cases
+    tuple 
+ 
 
     script:
     """
@@ -57,20 +57,25 @@ process MAG_MAG {
     """
 }   
 
-process networks {
-    tag
+process NETWORKS_MB {
+    
+    tag "$temp"
 
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
     input:
-    val 
+    tuple val(temp), path(oc_file)
 
     output:
-    path 
+    path "*.csv"
 
     script:
     """
-    Rscript 
+    Rscript ${projectDir}/MAGs_BGCs_interactions/networks_mb.r \
+        -m ${params.microbial_lineage} \
+        -b ${params.bgc_groups} \
+        -f ${oc_file} \
+        -o ./
     """
 
 }
@@ -80,7 +85,10 @@ workflow {
     
     temp_ch = Channel.of(params.temps)
     
-    MAG_BGC(temp_ch)
+    mag_bgc_out = MAG_BGC(temp_ch)
+    
+    NETWORKS_MB(mag_bgc_out.oc_filt)
+
     MAG_MAG(temp_ch)
 
 }

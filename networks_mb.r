@@ -13,9 +13,9 @@ library(paletteer)
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
-  make_option(c("-i", "--indir"), type="character", help="Input directory"),
-  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-w", "--workdir"), type="character", help = "Working directory")
+  make_option(c("-f", "--file_oc"), type="character", help="file with oc cases"),
+  make_option(c("-w", "--file_mm"), type="character", help="file with MAG-MAG interactions"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -25,7 +25,8 @@ bgc_group <- opt$bgc_groups
 # Loading metadata and cases
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
-cases <- read.csv(file= paste0(opt$workdir, 'oc_filt.csv'), header = TRUE)
+cases <- opt$file_oc
+real_cases <- opt$file_mm
 
 #----------------
 #### MAG<-BGC ####
@@ -100,7 +101,7 @@ nodes <- nodes %>%
 #  title = "oc mOTUs-GCCs",
 #  collection = "Interacciones MAGs-BGCs")
 
-### Sub y sobre abundancia productos BGCs  ---
+### Sub y sobre abundancia productos BGCs  ----
 
 # esperados (dataset global)
 esp <- meta_bgcs %>%
@@ -136,6 +137,7 @@ enrichment_plot <- enrichment %>%
     y = "Biosynthetic product"
   )
 
+
 ### Save data & graphs ----
 write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
@@ -145,14 +147,13 @@ ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, 
 #### MAG->BGC->MAG ####
 #-----------------------
 
-# Connect 
+# Connect the production MAGs
 bgc_to_motu <- meta_bgcs %>%
   select(BGC, Genome, !!bgc_group) %>%
   left_join(meta_mags %>% select(Genome, !!mag_lineage), by = "Genome") %>%
   rename(bgc_id = BGC, gcc_id = !!bgc_group, motu_id = !!mag_lineage) %>%
   distinct()
 gcc_in_cases <- unique(cases$Bgcs) # keep only the GCCs that are in the network
-
 
 ### Edges ----
 # production edges (MAG -> BGC)
@@ -258,4 +259,54 @@ write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
 write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
 
 
+# these are all the possible cases were MAGs interact with MAGs based on the 
+# production, but this doesn't mean that these interactions are really happening
+# now we have to filter those possible cases that are not actually happening with
+# the MAGs-MAGs interactions process
 
+#-------------------------------
+#### MAG->MAG FILTERED ####
+#-------------------------------
+
+# obtain a list of the bgcs in the network mbm
+# with a for, for each bgc, keep only the mag-mag interactions that are also in the cases_mm 
+
+# adaptar real_cases para que MAGi,MAGj sea igual que MAGj,MAGi
+real_cases <- real_cases %>%
+  transmute(
+    source = source,
+    target = target,
+    pair = map2_chr(source, target, ~ paste(sort(c(.x, .y)), collapse = "_")),
+    weight_mm = weight
+  ) 
+
+bgc_list <- unique(edges_mm$bgc)
+edges_filt <- list()
+
+for (bgc in bgc_list) {
+  sub_edges <- edges_mm %>%
+    filter(bgc == !!bgc)  %>%
+    mutate(pair = map2_chr(source, target, ~ paste(sort(c(.x, .y)), collapse = "_")))
+  
+  sub_filtered <- sub_edges %>%
+    semi_join(real_cases, by = "pair")
+  
+  if (nrow(sub_filtered) == 0) next
+  
+  edges_filt[[bgc]] <- sub_filtered
+}
+
+edges_mm_filt <- bind_rows(edges_filt)
+
+edges_mm_unique <- edges_mm_filt %>%
+  distinct(pair, .keep_all = TRUE)
+
+edges_mm_collapsed <- edges_mm_filt %>%
+  group_by(pair) %>%
+  summarise(
+    source = first(source),
+    target = first(target),
+    n_bgcs = n(),
+    bgcs = paste(unique(bgc), collapse = ";"),
+    .groups = "drop"
+  )
