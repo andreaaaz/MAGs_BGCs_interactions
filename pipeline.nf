@@ -24,7 +24,7 @@ process MAG_BGC {
 
     script:
     """
-    Rscript ${projectDir}/MAGs_BGCs_interactions/interactions_MAG-BGC.r \
+    Rscript ${projectDir}/interactions_MAG-BGC.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -t ${temp} \
@@ -49,7 +49,7 @@ process MAG_MAG {
 
     script:
     """
-    Rscript ${projectDir}/MAGs_BGCs_interactions/interactions_MAG-MAG.r \
+    Rscript ${projectDir}/interactions_MAG-MAG.r \
         -m ${params.microbial_lineage} \
         -t ${temp} \
         -i ${params.indir} \
@@ -72,7 +72,7 @@ process NETWORKS_MM {
 
     script:
     """
-    Rscript ${projectDir}/MAGs_BGCs_interactions/networks_mm.r \
+    Rscript ${projectDir}/networks_mm.r \
         -m ${params.microbial_lineage} \
         -i ${params.indir} \
         -f ${oc_file} \
@@ -95,7 +95,7 @@ process NETWORKS_MB {
 
     script:
     """
-    Rscript ${projectDir}/MAGs_BGCs_interactions/networks_mb.r \
+    Rscript ${projectDir}/networks_mb.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -i ${params.indir} \
@@ -109,7 +109,7 @@ process NETWORKS_MB {
 
 workflow {
     
-    temp_ch = Channel.of(params.temps)
+    temp_ch = Channel.fromList(params.temps)
     
     mag_bgc_out = MAG_BGC(temp_ch)
 
@@ -117,7 +117,7 @@ workflow {
     
     networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
-    combined = mag_bgc_out.oc_filt.join(net_mm_out.edges_mm)
+    combined = mag_bgc_out.oc_filt.join(networks_mm_out.edges_mm)
 
     NETWORKS_MB(combined)
 
