@@ -1,5 +1,6 @@
 meta_mags <- read.csv("~/metadata/metadata.csv")
 meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
+meta_sites <- read.csv("~/metadata/meta_sites.csv")
 
 cases <- read.csv("~/metadata/oc_filt.csv")
 real_cases <- read.csv("~/edges_mm.csv")
