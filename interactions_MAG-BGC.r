@@ -36,23 +36,51 @@ prep_bgcs <- function(meta_bgcs, bgcs){
   return(bgcs_by_sites)
 }  
 
-recreate_table <- function(mag, bgc, m_by_sites, b_by_sites) {
+evaluate_pairMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites) {
   
-  # select the site column and the current column for both tables
+  # create table
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
   table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
   
-  # bind col1 and col2 by site (full_join porque sino se pierden interacciones)
-  table_comb <- full_join(table1, table2, by = "sites")
+  temp3 <- full_join(table1, table2, by = "sites")
   
-  # convertir a 0 los NAs generados por el join
-  table_comb[[mag]] <- ifelse(is.na(table_comb[[mag]]), 0, table_comb[[mag]])
-  table_comb[[bgc]] <- ifelse(is.na(table_comb[[bgc]]), 0, table_comb[[bgc]])
+  temp3[[mag]] <- ifelse(is.na(temp3[[mag]]), 0, temp3[[mag]])
+  temp3[[bgc]] <- ifelse(is.na(temp3[[bgc]]), 0, temp3[[bgc]])
   
-  # filt rows were both are 0
-  table_comb <- table_comb[!(table_comb[[mag]] == 0 & table_comb[[bgc]] == 0), ]
+  temp3 <- temp3[!(temp3[[mag]] == 0 & temp3[[bgc]] == 0), ]
   
-  return(table_comb)
+  if (nrow(temp3) == 0) return(NULL)
+  
+  mag_sites <- sum(temp3[[mag]] > 0) 
+  bgc_sites <- sum(temp3[[bgc]] > 0)
+  
+  if (mag_sites < min_sites || bgc_sites < min_sites) return(NULL)
+  
+  q <- mag_sites / total_sites
+  p <- bgc_sites / total_sites
+  
+  pi_e <- p - 2*p*q + q
+  pi_o <- p * q
+  
+  ex_sites <- sum((temp3[[mag]] == 0 & temp3[[bgc]] > 0) |
+                    (temp3[[mag]] > 0 & temp3[[bgc]] == 0))
+  
+  oc_sites <- sum((temp3[[mag]] > 0) & (temp3[[bgc]] > 0))
+  
+  return(list(
+    Mags = mag, 
+    Bgcs = bgc,
+    mags_sites = mag_sites, 
+    bgcs_sites = bgc_sites,
+    ex_sites = ex_sites,
+    oc_sites = oc_sites,
+    q = q,
+    p = p,
+    pi_exclusion = pi_e,
+    pi_occurrence = pi_o,
+    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
+  ))
 }
 
 #### DATA LOAD ####
@@ -134,42 +162,12 @@ for (col1 in colnames(mags_by_sites)) {
   for (col2 in colnames(bgcs_by_sites)) { 
     if (col2 == "sites") next
     
-    # create table of magi and bgcj
-    temp3 <- recreate_table(col1, col2, mags_by_sites, bgcs_by_sites)
+    res <- evaluate_pairMB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites, total_sites)
     
-    if (nrow(temp3) == 0) next 
+    if (is.null(res)) next
     
-    mag_sites <- sum(temp3[[col1]] > 0) 
-    bgc_sites <- sum(temp3[[col2]] > 0)
-    if (mag_sites < min_sites || bgc_sites < min_sites) next # filtrar MAGs y BGCs que aparezcan en más de 5 sitios 
+    cases_list[[length(cases_list) + 1]] <- res
     
-    q <- mag_sites / total_sites
-    p <- bgc_sites / total_sites
-    pi_e <- p - 2*p*q + q
-    pi_o <- p * q
-    ex_sites <- sum((temp3[[col1]] == 0 & temp3[[col2]] > 0) |  # co-exclusion
-                      (temp3[[col1]] > 0 & temp3[[col2]] == 0))
-    oc_sites <- sum((temp3[[col1]] > 0) & (temp3[[col2]] > 0))  # co-occurrence
-    # save all the combinations of MAGi and BGCj and other data
-    cases_list[[length(cases_list) + 1]] <- list(
-      # names  
-      Mags = col1, 
-      Bgcs = col2,
-      # sites of mags and bgcs  
-      mags_sites = mag_sites, 
-      bgcs_sites = bgc_sites,
-      # patterns 
-      ex_sites = ex_sites,
-      oc_sites = oc_sites,
-      # probs
-      q = q,
-      p = p,
-      pi_exclusion = pi_e,
-      pi_occurrence = pi_o,
-      # p-values
-      pvalue_e = 1-pbinom(ex_sites, total_sites, pi_e),
-      pvalue_o = 1-pbinom(oc_sites, total_sites, pi_o)
-    )
   }
 }
 message("\n DONE :)")

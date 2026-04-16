@@ -9,7 +9,7 @@ library(optparse)
 library(igraph)
 library(paletteer)
 
-# Args
+# Args. 
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
@@ -313,3 +313,7 @@ edges_mm_collapsed <- edges_mm_filt %>%
     bgcs = paste(unique(bgc), collapse = ";"),
     .groups = "drop"
   )
+
+
+
+
