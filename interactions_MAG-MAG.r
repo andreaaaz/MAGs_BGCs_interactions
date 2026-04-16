@@ -25,14 +25,50 @@ prep_mags <- function(meta_mags, mags){
   return(mags_by_sites)
 }
 
-recreate_table <- function(mag1, mag2, m_by_sites) {
-  # bind col1 and col2
-  table_comb <- m_by_sites[, c("sites", mag1, mag2), drop=FALSE]
-
-  # filt rows were both are 0
-  table_comb <- table_comb[!(table_comb[[mag1]] == 0 & table_comb[[mag2]] == 0), ]
+evaluate_pair_magmag <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   
-  return(table_comb)
+  table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
+  table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
+  
+  comb <- full_join(table1, table2, by = "sites")
+  
+  comb[[magi]] <- ifelse(is.na(comb[[magi]]), 0, comb[[magi]])
+  comb[[magj]] <- ifelse(is.na(comb[[magj]]), 0, comb[[magj]])
+  
+  comb <- comb[!(comb[[magi]] == 0 & comb[[magj]] == 0), ]
+  
+  if (nrow(comb) == 0) return(NULL)
+  
+  magi_sites <- sum(comb[[magi]] > 0) 
+  magj_sites <- sum(comb[[magj]] > 0)
+  
+  if (magi_sites < min_sites || magj_sites < min_sites) return(NULL)
+  
+  q <- magi_sites / total_sites
+  p <- magj_sites / total_sites
+  
+  pi_e <- p - 2*p*q + q
+  pi_o <- p * q
+  
+  ex_sites <- sum((comb[[magi]] == 0 & comb[[magj]] > 0) |
+                    (comb[[magi]] > 0 & comb[[magj]] == 0))
+  
+  oc_sites <- sum((comb[[magi]] > 0) & (comb[[magj]] > 0))
+  
+  return(list(
+    MAGi = magi,
+    MAGj = magj,
+    MAGi_sites = magi_sites,
+    MAGj_sites = magj_sites,
+    ex_sites = ex_sites,
+    oc_sites = oc_sites,
+    q = q,
+    p = p,
+    pi_exclusion = pi_e,
+    pi_occurrence = pi_o,
+    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
+  ))
 }
 
 #### DATA LOAD ####
@@ -106,40 +142,11 @@ for (i in 1:(n_mags - 1)) {
     
     magj <- mag_cols[j]
     
-    comb <- recreate_table(magi, magj, mags_by_sites)
+    res <- evaluate_pair_magmag(magi, magj, mags_by_sites, min_sites, total_sites)
     
-    if (nrow(comb) == 0) next 
+    if (is.null(res)) next
     
-    magi_sites <- sum(comb[[magi]] > 0) 
-    magj_sites <- sum(comb[[magj]] > 0)
-    
-    if (magi_sites < min_sites || magj_sites < min_sites) next
-    
-    q <- magi_sites / total_sites
-    p <- magj_sites / total_sites
-    
-    pi_e <- p - 2*p*q + q
-    pi_o <- p * q
-    
-    ex_sites <- sum((comb[[magi]] == 0 & comb[[magj]] > 0) |
-                      (comb[[magi]] > 0 & comb[[magj]] == 0))
-    oc_sites <- sum((comb[[magi]] > 0) & 
-                      (comb[[magj]] > 0))
-    
-    cases_list[[length(cases_list) + 1]] <- list(
-      MAGi = magi,
-      MAGj = magj,
-      mag1_sites = magi_sites,
-      mag2_sites = magj_sites,
-      ex_sites = ex_sites,
-      oc_sites = oc_sites,
-      q = q,
-      p = p,
-      pi_exclusion = pi_e,
-      pi_occurrence = pi_o,
-      pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
-      pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
-    )
+    cases_list[[length(cases_list) + 1]] <- res
   }
 }
 message("\n DONE :)")
