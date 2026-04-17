@@ -25,7 +25,7 @@ prep_mags <- function(meta_mags, mags){
   return(mags_by_sites)
 }
 
-evaluate_pair_magmag <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
+evaluate_pairMM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
@@ -142,7 +142,7 @@ for (i in 1:(n_mags - 1)) {
     
     magj <- mag_cols[j]
     
-    res <- evaluate_pair_magmag(magi, magj, mags_by_sites, min_sites, total_sites)
+    res <- evaluate_pairMM(magi, magj, mags_by_sites, min_sites, total_sites)
     
     if (is.null(res)) next
     
