@@ -7,94 +7,36 @@
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
 
-########### Functions #################
-
-prep_mags <- function(meta_mags, mags){
-  mags <- sym(mags)
-  # data prep
-  num_meta <- nrow(meta_mags)
-  meta_mags <- meta_mags %>% filter(!is.na(!!mags)) # omit NAs
-  fil_meta <- num_meta - nrow(meta_mags)
-  message("\n NOTE:", fil_meta, " MAGs were discarded due to missing ", mag_lineage," classification")
-  
-  # Count the number of MAGs per site and phylogenetic groups
-  mags_by_sites <- meta_mags %>%
-    count(sites, !!mags) %>%
-    pivot_wider(names_from = !!mags, values_from = n, values_fill = 0)
-  
-  return(mags_by_sites)
-}
-
-evaluate_pairMM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
-  
-  table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
-  table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
-  
-  comb <- full_join(table1, table2, by = "sites")
-  
-  comb[[magi]] <- ifelse(is.na(comb[[magi]]), 0, comb[[magi]])
-  comb[[magj]] <- ifelse(is.na(comb[[magj]]), 0, comb[[magj]])
-  
-  comb <- comb[!(comb[[magi]] == 0 & comb[[magj]] == 0), ]
-  
-  if (nrow(comb) == 0) return(NULL)
-  
-  magi_sites <- sum(comb[[magi]] > 0) 
-  magj_sites <- sum(comb[[magj]] > 0)
-  
-  if (magi_sites < min_sites || magj_sites < min_sites) return(NULL)
-  
-  q <- magi_sites / total_sites
-  p <- magj_sites / total_sites
-  
-  pi_e <- p - 2*p*q + q
-  pi_o <- p * q
-  
-  ex_sites <- sum((comb[[magi]] == 0 & comb[[magj]] > 0) |
-                    (comb[[magi]] > 0 & comb[[magj]] == 0))
-  
-  oc_sites <- sum((comb[[magi]] > 0) & (comb[[magj]] > 0))
-  
-  return(list(
-    MAGi = magi,
-    MAGj = magj,
-    MAGi_sites = magi_sites,
-    MAGj_sites = magj_sites,
-    ex_sites = ex_sites,
-    oc_sites = oc_sites,
-    q = q,
-    p = p,
-    pi_exclusion = pi_e,
-    pi_occurrence = pi_o,
-    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
-    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
-  ))
-}
-
-#### DATA LOAD ####
-
 # Args
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
-  make_option(c("-i", "--indir"), type="character", help="Working directory"),
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)")
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"),
+  make_option(c("-e", "--method"), type="character", default="binomial", help="Method to calculate significance")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
 mag_lineage <- opt$microbial_lineage
 min_sites <- opt$minimum_sites
 temp_r <- opt$temp
+method <- opt$method
 
 # Run script
 # Rscript -m mOTUs_Species_Cluster -s 5 -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
 # -o /mnt/atgc-d3/sur/users/azermeno/exp/2025-interacions/
 
+
+#### DATA LOAD ####
 message("\n Preparing input, please wait ...")
 
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE)
+# functions
+source(paste0(opt$workdir, "functions.R"))
+
 
 ##### TEMPERATURE ######
 temp_range <- NULL
@@ -107,13 +49,12 @@ if (temp_r != "global") {
   meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
     filter(between(temperature_..C., temp_range[1], temp_range[2]))
 }
-
 # filtrar MAGs por sitios
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
-
 # Count how many microbial lineages and BGC groups are per site
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
+
 
 ############### Workflow ##############################
 
@@ -128,6 +69,9 @@ mag_cols <- mag_cols[mag_cols != "sites"]
 n_mags <- length(mag_cols)
 # esto generara 'm x m' tablas de 806 renglones (sitios definidos por station_depth)
 # donde 'm' es el numero de microbial lienages
+
+
+
 for (i in 1:(n_mags - 1)) {
   
   magi <- mag_cols[i]
@@ -142,7 +86,16 @@ for (i in 1:(n_mags - 1)) {
     
     magj <- mag_cols[j]
     
-    res <- evaluate_pairMM(magi, magj, mags_by_sites, min_sites, total_sites)
+    res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
+    
+    # choosing method
+    if (method == "binomial") {
+      res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
+    } else if (method == "mutual") {
+      res <- mut_infoMM(magi, magj, mags_by_sites, min_sites)
+    } else {
+      stop("Invalid method")
+    }
     
     if (is.null(res)) next
     
@@ -156,22 +109,24 @@ message("\n Preparing output, please wait ...")
 cases <- bind_rows(cases_list)
 
 # Correcting multiple testing FDR
-
-cases <- cases %>%
-  mutate(
-    fdr_pval_e = p.adjust(pvalue_e, method = "BH"),
-    fdr_pval_o = p.adjust(pvalue_o, method = "BH")
-  )
-
-occurrence <- cases %>%
-  filter(fdr_pval_o <= 0.05)
-exclusion <- cases %>%
-  filter(fdr_pval_e <= 0.05)
-
-# save the produced tables
-write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
-write.csv(occurrence, file = paste0(opt$outdir, 'oc_filt.csv'), row.names = FALSE)
-write.csv(exclusion, file = paste0(opt$outdir, 'ex_filt.csv'), row.names = FALSE)
+if (method == "binomial") {
+  cases <- cases %>%
+    mutate(
+      fdr_pval_e = p.adjust(pvalue_e, method = "BH"),
+      fdr_pval_o = p.adjust(pvalue_o, method = "BH")
+    )
+  
+  occurrence <- cases %>%
+    filter(fdr_pval_o <= 0.05)
+  exclusion <- cases %>%
+    filter(fdr_pval_e <= 0.05)
+  # save the produced tables
+  write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
+  write.csv(occurrence, file = paste0(opt$outdir, 'oc_filt.csv'), row.names = FALSE)
+  write.csv(exclusion, file = paste0(opt$outdir, 'ex_filt.csv'), row.names = FALSE)
+} else if (method == "mutual") {
+  write.csv(cases, file = paste0(opt$outdir, 'all_cases.csv'), row.names = FALSE)
+}
 
 message("\n Output saved")
 
