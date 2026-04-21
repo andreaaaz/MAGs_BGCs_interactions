@@ -156,8 +156,8 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   nmi <- max(0, nmi)
   
   return(tibble(
-    MAG = mag,
-    BGC = bgc,
+    Mags = mag,
+    Bgcs = bgc,
     NMI = nmi,
     mags_sites = sum(x_bin),
     bgcs_sites = sum(y_bin)
