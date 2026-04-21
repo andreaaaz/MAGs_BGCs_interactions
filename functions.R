@@ -165,7 +165,7 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
 }
 
 # For MAG-MAG interactions
-mut_infoMM <- function(mag, m_by_sites, min_sites){
+mut_infoMM <- function(magi, magj, m_by_sites, min_sites){
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
   
