@@ -5,6 +5,7 @@
 
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(Matrix))
 library(optparse)
 
 # Args
