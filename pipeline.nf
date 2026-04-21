@@ -3,7 +3,7 @@
 params.indir = 'metadata/'
 params.outdir = 'exp/2026-interactions/'
 
-prams.method = "binomial"
+params.method = "binomial"
 params.microbial_lineage = "mOTUs_Species_Cluster"
 params.bgc_groups = "gcf"
 
