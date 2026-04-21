@@ -16,7 +16,8 @@ option_list <- list(
   make_option(c("-f", "--file_mb"), type="character", help="file with oc cases"),
   make_option(c("-d", "--file_mm"), type="character", help="file with MAG-MAG interactions"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-i", "--indir"), type="character", help="Input directory")
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -24,6 +25,8 @@ mag_lineage <- opt$microbial_lineage
 bgc_group <- opt$bgc_groups
 cases_mb <- opt$file_mb
 cases_mm <- opt$file_mm
+# functions
+source(paste0(opt$workdir, "functions.R"))
 
 # Loading metadata and cases
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)

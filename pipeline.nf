@@ -3,6 +3,7 @@
 params.indir = 'metadata/'
 params.outdir = 'exp/2026-interactions/'
 
+prams.method = "binomial"
 params.microbial_lineage = "mOTUs_Species_Cluster"
 params.bgc_groups = "gcf"
 
@@ -29,7 +30,9 @@ process MAG_BGC {
         -b ${params.bgc_groups} \
         -t ${temp} \
         -i ${params.indir} \
-        -o ./
+        -o ./ \
+        -w ${projectDir} \
+        -e ${params.method}
     """
 }
 
@@ -53,7 +56,9 @@ process MAG_MAG {
         -m ${params.microbial_lineage} \
         -t ${temp} \
         -i ${params.indir} \
-        -o ./
+        -o ./ \
+        -w ${projectDir} \
+        -e ${params.method}
     """
 }   
 
@@ -76,7 +81,7 @@ process NETWORKS_MM {
         -m ${params.microbial_lineage} \
         -i ${params.indir} \
         -f ${oc_file} \
-        -o ./
+        -o ./ \
     """
 
 }
@@ -100,8 +105,9 @@ process NETWORKS_MB {
         -b ${params.bgc_groups} \
         -i ${params.indir} \
         -o ./ \
+        -w ${projectDir} \
         -f ${oc_mb} \
-        -d ${edges_mm} 
+        -d ${edges_mm} \
     """
 
 }
