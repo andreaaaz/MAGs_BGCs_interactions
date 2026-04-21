@@ -31,7 +31,7 @@ process MAG_BGC {
         -t ${temp} \
         -i ${params.indir} \
         -o ./ \
-        -w ${projectDir} \
+        -w ${projectDir}/ \
         -e ${params.method}
     """
 }
@@ -57,7 +57,7 @@ process MAG_MAG {
         -t ${temp} \
         -i ${params.indir} \
         -o ./ \
-        -w ${projectDir} \
+        -w ${projectDir}/ \
         -e ${params.method}
     """
 }   
@@ -105,7 +105,7 @@ process NETWORKS_MB {
         -b ${params.bgc_groups} \
         -i ${params.indir} \
         -o ./ \
-        -w ${projectDir} \
+        -w ${projectDir}/ \
         -f ${oc_mb} \
         -d ${edges_mm} \
     """
