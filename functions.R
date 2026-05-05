@@ -104,6 +104,8 @@ binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites
 
 # For MAG-BGC interactions
 mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
+  
+  # crear tabla
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
   table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
   
@@ -112,13 +114,15 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   temp3[[mag]] <- ifelse(is.na(temp3[[mag]]), 0, temp3[[mag]])
   temp3[[bgc]] <- ifelse(is.na(temp3[[bgc]]), 0, temp3[[bgc]])
   
+  # saltar las 
   if (nrow(temp3) == 0) return(NULL)
   
-  # combertir a 0 y 1
+  # binarizar
   x_bin <- as.integer(temp3[[mag]] > 0)
   y_bin <- as.integer(temp3[[bgc]] > 0)
   
-  if (sum(x_bin) < min_sites || sum(y_bin) < min_sites) return(NULL)
+  # probarlo de ambas formas
+  # if (sum(x_bin) < min_sites || sum(y_bin) < min_sites) return(NULL)
   
   # calcular informacion mutua
   n <- length(x_bin)
