@@ -9,6 +9,7 @@
 
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(Matrix))
 library(optparse)
 library(ggplot2)
 
@@ -67,19 +68,32 @@ perm_results <- vector("list", n_perm)
 counter <- 0
 start_time <- Sys.time()
 
-#### WORKFLOW #####
+# esto se va a tardar mucho
 
 for (i in 1:n_perm) {
   
-  # permutar solo MAGs
+  start_perm <- Sys.time()
+  message("\n==============================")
+  message("Permutation ", i, " / ", n_perm)
+  
+  # permutar MAGs
   mags_perm <- mags_by_sites
   mags_perm[, -1] <- mags_perm[sample(nrow(mags_perm)), -1]
   
-  # correr tu pipeline normal pero con mags_perm
   cases_perm <- list()
+  counter <- 0
   
   for (col1 in colnames(mags_perm)) {
     if (col1 == "sites") next
+    
+    counter <- counter + 1
+    
+    # progreso interno
+    if (counter %% 100 == 0) {
+      elapsed <- difftime(Sys.time(), start_perm, units = "mins")
+      message("- Columns processed: ", counter,
+              " | Time: ", round(elapsed, 2), " mins")
+    }
     
     for (col2 in colnames(bgcs_by_sites)) {
       if (col2 == "sites") next
@@ -92,15 +106,10 @@ for (i in 1:n_perm) {
     }
   }
   
-  perm_results[[i]] <- bind_rows(cases_perm)
+  perm_results[[i]] <- dplyr::bind_rows(cases_perm)
+  
+  # tiempo por permutación
+  elapsed_perm <- difftime(Sys.time(), start_perm, units = "mins")
+  message("Permutation ", i, " DONE in ", round(elapsed_perm, 2), " mins")
 }
 
-
-# juntar todas las permutaciones
-perm_all <- bind_rows(perm_results, .id = "perm")
-
-# comparar distribuciones
-ggplot() +
-  geom_density(data = cases, aes(x = NMI), color = "red") +
-  geom_density(data = perm_all, aes(x = NMI), color = "black") +
-  theme_minimal()
