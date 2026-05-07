@@ -1,9 +1,10 @@
-#### Functions #####
+####### Functions ############
 
-## Binomial test
+#### Binomial test ####
+
 # Make table combined by sites and calculate the p-value of co-exclusion and co-occurrence
 
-# For interactions MAG-MAG
+### For interactions MAG-MAG ###
 binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
@@ -50,7 +51,7 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   ))
 }
 
-# For MAG-BGC interactions
+### For MAG-BGC interactions ###
 binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites) {
   
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
@@ -98,11 +99,11 @@ binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites
 }
 
 
-## Mutual Information 
+#### Mutual Information ####
 
 # Create the table and obtain the index of mutual information if the interaction 
 
-# For MAG-BGC interactions
+### For MAG-BGC interactions ###
 mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   
   # crear tabla
@@ -114,7 +115,7 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   temp3[[mag]] <- ifelse(is.na(temp3[[mag]]), 0, temp3[[mag]])
   temp3[[bgc]] <- ifelse(is.na(temp3[[bgc]]), 0, temp3[[bgc]])
   
-  # saltar las 
+  # saltar las tablas vacias
   if (nrow(temp3) == 0) return(NULL)
   
   # binarizar
@@ -130,7 +131,7 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   x <- x_bin + 1 # indexear
   y <- y_bin + 1
   
-  k <- max(c(x, y))
+  k <- max(c(x, y)) # numero de clasificaciones
   
   Mx <- sparseMatrix(i = 1:n, j = x, x = 1, dims = c(n, k))
   My <- sparseMatrix(i = 1:n, j = y, x = 1, dims = c(n, k))
@@ -168,7 +169,7 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   ))
 }
 
-# For MAG-MAG interactions
+### For MAG-MAG interactions ###
 mut_infoMM <- function(magi, magj, m_by_sites, min_sites){
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
@@ -230,6 +231,9 @@ mut_infoMM <- function(magi, magj, m_by_sites, min_sites){
   ))
 }
 
+#### Prepare Tables ####
+
+# Prepare tables for the workflow
 
 prep_mags <- function(meta_mags, mags){
   mags <- sym(mags)
@@ -258,7 +262,7 @@ prep_bgcs <- function(meta_bgcs, bgcs){
   return(bgcs_by_sites)
 } 
 
-
+#### Recreate tables ####
 recreate_tableMB <- function(mag, bgc, m_by_sites, b_by_sites) {
   
   # select the site column and the current column for both tables

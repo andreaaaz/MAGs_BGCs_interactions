@@ -6,10 +6,10 @@
 # para saber si el  NMI es por azar o si si esta detectando algo
 # se haran permutaciones en los sitios de la tabla mags_by_sites unicamente
 
-
 # libraries
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(Matrix))
+library(parallel)
 library(optparse)
 library(ggplot2)
 
@@ -30,6 +30,7 @@ bgc_group <- opt$bgc_groups
 min_sites <- opt$minimum_sites
 temp_r <- opt$temp
 
+
 #### DATA LOAD ####
 message("\n Preparing input, please wait ...")
 
@@ -49,50 +50,47 @@ if (temp_r != "global") {
   meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
     filter(between(temperature_..C., temp_range[1], temp_range[2]))
 }
-# filtrar MAGs y BGCa por sitios
+# filtrar MAGs y BGCs por sitios
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
 meta_bgcs <- meta_bgcs %>%           
   semi_join(meta_sites, by = "sites")
 
-# prep tables
+
+#### PREP TABLES ####
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
 ############### Workflow ##############################
-# para numero de permutaciones
-n_perm <- 10
-# tabla para guardar los resultados de las permutaciones 
-perm_results <- vector("list", n_perm)
-#para imprimir avance
-counter <- 0
-start_time <- Sys.time()
 
-# esto se va a tardar mucho
+#### Permutaciones ####
 
-for (i in 1:n_perm) {
-  
+# funcion de permutaciones
+run_one_perm <- function(i, mags_by_sites, bgcs_by_sites, min_sites) {
+  # set up
   start_perm <- Sys.time()
-  message("\n==============================")
-  message("Permutation ", i, " / ", n_perm)
-  
-  # permutar MAGs
-  mags_perm <- mags_by_sites
-  mags_perm[, -1] <- mags_perm[sample(nrow(mags_perm)), -1]
-  
-  cases_perm <- list()
   counter <- 0
+  message("\nRunning permutation ", i)
+  # para el resultado real
+  if (i == 1) {
+    mags_perm <- mags_by_sites
+  } else {
+  # para las permutaciones
+    mags_perm <- mags_by_sites
+    mags_perm[, -1] <-
+      mags_perm[sample(nrow(mags_perm)), -1]
+  }
+  
+  cases_list <- list()
   
   for (col1 in colnames(mags_perm)) {
     if (col1 == "sites") next
     
-    counter <- counter + 1
-    
     # progreso interno
+    counter <- counter + 1
     if (counter %% 100 == 0) {
       elapsed <- difftime(Sys.time(), start_perm, units = "mins")
-      message("- Columns processed: ", counter,
-              " | Time: ", round(elapsed, 2), " mins")
+      message("\n- Columns processed: ", counter, " | Time: ", round(elapsed, 2), " mins")
     }
     
     for (col2 in colnames(bgcs_by_sites)) {
@@ -101,15 +99,39 @@ for (i in 1:n_perm) {
       res <- mut_infoMB(col1, col2, mags_perm, bgcs_by_sites, min_sites)
       
       if (!is.null(res)) {
-        cases_perm[[length(cases_perm) + 1]] <- res
+        cases_list[[length(cases_list) + 1]] <- res
       }
     }
   }
   
-  perm_results[[i]] <- dplyr::bind_rows(cases_perm)
-  
-  # tiempo por permutación
-  elapsed_perm <- difftime(Sys.time(), start_perm, units = "mins")
-  message("Permutation ", i, " DONE in ", round(elapsed_perm, 2), " mins")
+  bind_rows(cases_list) %>%
+    mutate(perm = i, type = ifelse(i == 1, "real", "perm"))
 }
 
+### Parallelization ###
+
+message("--------PERMUTATIONS-------")
+# set up 
+ncores <- 11
+n_perm <- 11
+perm_results <- mclapply(
+  1:n_perm,
+  run_one_perm,
+  mags_by_sites = mags_by_sites,
+  bgcs_by_sites = bgcs_by_sites,
+  min_sites = min_sites,
+  mc.cores = ncores
+)
+
+message("Saving data, please wait...")
+cases_perm <- bind_rows(perm_results)
+message("Done :)")
+
+
+#### Plot distributions ####
+
+
+
+#### Save info ####
+
+write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)
