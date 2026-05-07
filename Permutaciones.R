@@ -20,7 +20,7 @@ option_list <- list(
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
   make_option(c("-t", "--temp"), type="character", default="low", help="Range of temperature (max, mid and min)"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
-  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory")
   )
 opt <- parse_args(OptionParser(option_list=option_list))
 
