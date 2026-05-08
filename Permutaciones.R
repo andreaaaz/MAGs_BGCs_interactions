@@ -112,8 +112,8 @@ run_one_perm <- function(i, mags_by_sites, bgcs_by_sites, min_sites) {
 
 message("--------PERMUTATIONS-------")
 # set up 
-ncores <- 10
-n_perm <- 10
+ncores <- 11
+n_perm <- 11
 perm_results <- mclapply(
   1:n_perm,
   run_one_perm,
