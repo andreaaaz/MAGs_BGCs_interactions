@@ -77,8 +77,7 @@ run_one_perm <- function(i, mags_by_sites, bgcs_by_sites, min_sites) {
   } else {
   # para las permutaciones
     mags_perm <- mags_by_sites
-    mags_perm[, -1] <-
-      mags_perm[sample(nrow(mags_perm)), -1]
+    mags_perm[, -1] <- lapply(mags_perm[, -1], sample)
   }
   
   cases_list <- list()
@@ -128,8 +127,34 @@ cases_perm <- bind_rows(perm_results)
 message("Done :)")
 
 
+# TRY permutations
+station <- c("site1", "site2", "site3")
+mag1 <-  c("1", "4", "7")
+mag2 <- c("2", "5", "8")
+mag3 <- c("3", "6", "9")
+data <- data.frame(station, mag1, mag2, mag3)
+
+# intento 1 (esta mal, cambia renglones completos agrupados)
+data[, -1] <- data[sample(nrow(data)), -1]
+# intento 2 (esta bien, cambia los renglones de cada columna individual)
+data[, -1] <- lapply(data[, -1], sample)
+
+
+
+
+
+
+
 #### Plot distributions ####
 
+cases_perm <- read.csv("~/cases_perm.csv")
+cases_real <- read.csv("~/all_cases.csv")
+
+meta_bgcs <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, all_of(mag_lineage)), by = "Genome") # add lineage to bgc table by genome
+
+cases_perm2 <- cases_perm %>% 
+  anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
 
 
 #### Save info ####
