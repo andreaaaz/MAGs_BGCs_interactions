@@ -4,7 +4,6 @@ meta_sites <- read.csv("~/metadata/meta_sites.csv")
 
 cases <- read.csv("~/metadata/oc_filt.csv")
 real_cases <- read.csv("~/edges_mm.csv")
-
 source("~/MAGs_BGCs_interactions/functions.R")
 ################################################
 #### ANALYSIS OF RESULTS #######################
