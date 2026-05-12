@@ -130,18 +130,80 @@ message("Done :)")
 
 #### Plot distributions ####
 
-# stream distribution plot?
+## distribucion de cada permutacion individual
+ggplot(cases_perm, aes(x = NMI, group = perm)) +
+  geom_density(
+    data = subset(cases_perm, type == "perm"),
+    fill = "grey70",
+    color = "grey40",
+    alpha = 0.3) +
+  geom_density(
+    data = subset(cases_perm, type == "real"),
+    fill = "steelblue",
+    color = "darkblue",
+    alpha = 0.6,
+    linewidth = 1) +
+  coord_cartesian(xlim = c(0, 0.1)) +
+  theme_classic() +
+  labs(
+    x = "NMI",
+    y = "Density",
+    title = "Distribution of NMI values") 
 
-# cases_perm <- read.csv("~/cases_perm.csv")
-# cases_real <- read.csv("~/all_cases.csv")
-# 
-# meta_bgcs <- meta_bgcs %>%
-#   left_join(meta_mags %>% select(Genome, all_of(mag_lineage)), by = "Genome") # add lineage to bgc table by genome
-# 
-# cases_perm2 <- cases_perm %>% 
-#   anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
+## distribucion de cada permutacion individual por colores
+ggplot(cases_perm, aes(x = NMI, group = perm, color = factor(perm))) +
+  geom_density(
+    data = subset(cases_perm, type == "perm"),
+    alpha = 0.4) +
+  geom_density(
+    data = subset(cases_perm, type == "real"),
+    color = "darkblue",
+    linewidth = 1) +
+  coord_cartesian(xlim = c(0, 0.1)) +
+  theme_classic() +
+  labs(
+    x = "NMI",
+    y = "Density",
+    color = "Permutation")
+
+#histograma de permutaciones juntas con log10
+ggplot(cases_perm, aes(x = NMI, fill = type)) +
+  geom_histogram(
+    bins = 100,
+    position = "identity",
+    alpha = 0.5) +
+  scale_y_continuous(
+    trans = "log1p",
+    breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = scales::comma) +
+  theme_classic()
+
+# histograma permutaciones individuales
+ggplot(cases_perm, aes(x = NMI, fill = factor(perm))) +
+  geom_histogram(
+    data = subset(cases_perm, type == "perm"),
+    alpha = 0.25,
+    position = "identity",
+    bins = 100) +
+  geom_histogram(
+    data = subset(cases_perm, type == "real"),
+    fill = "steelblue",
+    color = "darkblue",
+    alpha = 0,
+    bins = 100) +
+  scale_y_continuous(
+    trans = "log1p",
+    breaks = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+    labels = scales::comma
+  ) +
+  theme_classic() +
+  labs(
+    x = "NMI",
+    y = "Count",
+    fill = "Permutation",
+    title = "Distribution of NMI values"
+  )
 
 
 #### Save info ####
-
 write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)
