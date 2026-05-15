@@ -123,7 +123,7 @@ mut_infoMB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites){
   y_bin <- as.integer(temp3[[bgc]] > 0)
   
   # probarlo de ambas formas
-  # if (sum(x_bin) < min_sites || sum(y_bin) < min_sites) return(NULL)
+  if (sum(x_bin) < min_sites || sum(y_bin) < min_sites) return(NULL)
   
   # calcular informacion mutua
   n <- length(x_bin)
@@ -263,11 +263,12 @@ prep_bgcs <- function(meta_bgcs, bgcs){
 } 
 
 #### Recreate tables ####
-recreate_tableMB <- function(mag, bgc, m_by_sites, b_by_sites) {
+recreate_tableMB <- function(mag, bgc, mags_by_sites, bgcs_by_sites) {
   
   # select the site column and the current column for both tables
-  table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
-  table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
+  table1 <- mags_by_sites[, c("sites", mag), drop = FALSE]
+  table2 <- bgcs_by_sites[, c("
+                              sites", bgc), drop = FALSE]
   
   # bind col1 and col2 by site (full_join porque sino se pierden interacciones)
   table_comb <- full_join(table1, table2, by = "sites")
@@ -282,7 +283,7 @@ recreate_tableMB <- function(mag, bgc, m_by_sites, b_by_sites) {
   return(table_comb)
 }
 
-recreate_tableMM <- function(magi, magj, m_by_sites) {
+recreate_tableMM <- function(magi, magj, mags_by_sites) {
   
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
@@ -294,6 +295,6 @@ recreate_tableMM <- function(magi, magj, m_by_sites) {
   
   comb <- comb[!(comb[[magi]] == 0 & comb[[magj]] == 0), ]
   
-  return(table_comb)
+  return(comb)
 }
 
