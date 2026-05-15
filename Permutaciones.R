@@ -206,4 +206,5 @@ ggplot(cases_perm, aes(x = NMI, fill = factor(perm))) +
 
 
 #### Save info ####
+
 write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)

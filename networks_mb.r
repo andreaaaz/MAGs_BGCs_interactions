@@ -1,48 +1,51 @@
 #######################################
 #### NETWORKS MAGs-BGCs ###############
 ## Andrea Zermeño Díaz ################
-# march-2026 ##########################
+# may-2026 ##########################
 
+# libraries
 suppressPackageStartupMessages(library(tidyverse))
 library(ggplot2)
 library(optparse)
-library(igraph)
+suppressPackageStartupMessages(library(igraph))
 library(paletteer)
 
-# Args. 
+### ARGS ---- 
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
   make_option(c("-f", "--file_mb"), type="character", help="file with oc cases"),
-  make_option(c("-d", "--file_mm"), type="character", help="file with MAG-MAG interactions"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
-  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-w", "--workdir"), type="character", help="Working directory")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
-
 mag_lineage <- opt$microbial_lineage
 bgc_group <- opt$bgc_groups
-cases_mb <- opt$file_mb
-cases_mm <- opt$file_mm
-# functions
-source(paste0(opt$workdir, "functions.R"))
 
-# Loading metadata and cases
+### DATA LOAD ----
+# metadata
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
-cases <- read.csv(cases_mb)
-real_cases <- read.csv(cases_mm)
+# results
+cases <- opt$file_mb
+# functions
+source(paste0(opt$workdir, "functions.R"))
+# prep tables for the MAG-MAG filter
+mags_by_sites <- prep_mags(meta_mags, mag_lineage)
+bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
+# deberia de filtrar tambien por temperatura????
 
-#----------------
-#### MAG<-BGC ####
-#----------------
+#-------------------------
+#### MAG<-BGC NETWORK ####
+#-------------------------
 
 ### Nodes and Edges ----
 nodes <- tibble(
-  id = unique(c(cases$Mags, cases$Bgcs)),
+  id = unique(c(cases$Mags, cases$Bgcs)),    
   type = ifelse(id %in% cases$Mags, "MAG", "BGC"))
-edges <- cases %>%
+
+edges <- cases %>%     #cases are already the edges, just rename it
   rename(source = Bgcs, target = Mags, weight = fdr_pval_o)
 
 ### Graph and degree ----
@@ -50,53 +53,54 @@ g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
 nodes$degree <- degree(g)
 
 ### Add representative groups ----
-rep_bgcs <- meta_bgcs %>%
-  group_by(.data[[bgc_group]], products) %>%
-  summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
+rep_bgcs <- meta_bgcs %>%    # table with all the GCCs and their products
+  group_by(.data[[bgc_group]], products) %>%   
+  summarise(n = n(), .groups = "drop_last") %>%   # count the most common
+  slice_max(order_by = n, n = 1) %>%.             # between each GCC
   select(id = all_of(bgc_group), rep_bgc = products)
-
-rep_mags <- meta_mags %>%
+  
+rep_mags <- meta_mags %>%.    #table with all the mOTUs and their families
   group_by(.data[[mag_lineage]], family) %>%
   summarise(n = n(), .groups = "drop_last") %>%
   slice_max(order_by = n, n = 1) %>%
   select(id = all_of(mag_lineage), rep_mag = family)
-
+# add the representative groups to the node information
 nodes <- nodes %>%
   left_join(rep_mags, by = "id") %>%
   left_join(rep_bgcs, by = "id") %>%
   mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
   select(-rep_bgc, -rep_mag)
 
-### Top nodes ----
-top_mag_nodes <- nodes %>%
-  filter(type == "MAG") %>%
-  arrange(desc(degree)) %>%
-  slice_head(n = 12)
-top_bgc_nodes <- nodes %>%
-  filter(type == "BGC") %>% 
-  arrange(desc(degree)) %>%
-  slice_head(n = 12)
-top_mag_groups <- unique(top_mag_nodes$color_group)
-top_bgc_groups <- unique(top_bgc_nodes$color_group)
-
-## Colors for top nodes
-mag_colors <- substr(
-  as.vector(paletteer::paletteer_d(
-    palette = "ggthemes::calc",
-    n = length(top_mag_groups))), 1, 7)
-bgc_colors <- substr(
-  as.vector(paletteer::paletteer_d(
-    palette = "ggthemes::gdoc",
-    n = length(top_bgc_groups))), 1, 7)
-
-nodes <- nodes %>%
-  mutate(color = case_when(
-    type == "MAG" & color_group %in% top_mag_groups ~ 
-      mag_colors[match(color_group, top_mag_groups)],
-    type == "BGC" & color_group %in% top_bgc_groups ~ 
-      bgc_colors[match(color_group, top_bgc_groups)],
-    TRUE ~ "darkgrey"))
+# ### Top nodes ----
+# # BUG: change to detect the top nodes without repetiton
+# top_mag_nodes <- nodes %>%
+#   filter(type == "MAG") %>%
+#   arrange(desc(degree)) %>%
+#   slice_head(n = 12)  # adapt the number to the colors in the palette
+# top_bgc_nodes <- nodes %>%
+#   filter(type == "BGC") %>% 
+#   arrange(desc(degree)) %>%
+#   slice_head(n = 12)
+# top_mag_groups <- unique(top_mag_nodes$color_group)
+# top_bgc_groups <- unique(top_bgc_nodes$color_group)
+# 
+# ## Colors for top nodes
+# mag_colors <- substr(
+#   as.vector(paletteer::paletteer_d(
+#     palette = "ggthemes::calc",
+#     n = length(top_mag_groups))), 1, 7) # adapt the number to the nodes
+# bgc_colors <- substr(
+#   as.vector(paletteer::paletteer_d(
+#     palette = "ggthemes::gdoc",
+#     n = length(top_bgc_groups))), 1, 7)
+# 
+# nodes <- nodes %>%
+#   mutate(color = case_when(
+#     type == "MAG" & color_group %in% top_mag_groups ~ 
+#       mag_colors[match(color_group, top_mag_groups)],
+#     type == "BGC" & color_group %in% top_bgc_groups ~ 
+#       bgc_colors[match(color_group, top_bgc_groups)],
+#     TRUE ~ "darkgrey"))
 
 
 ### Crear red en Cytoscape ----
@@ -109,213 +113,170 @@ nodes <- nodes %>%
 
 ### Sub y sobre abundancia productos BGCs  ----
 
-# esperados (dataset global)
-esp <- meta_bgcs %>%
-  count(products) %>%
-  mutate(rel_abundance = n / sum(n)) %>%
-  arrange(desc(rel_abundance)) %>%
-  rename(product = products, expected = rel_abundance)
-# observados 
-cases <- cases %>%
-  left_join(rep_bgcs, by = c("Bgcs"="id")) #asignar productos a gccs de la red
-obs <- cases %>%
-  count(rep_bgc) %>%
-  mutate(rel_abundance = n / sum(n)) %>%
-  arrange(desc(rel_abundance)) %>%
-  rename(product = rep_bgc, observed = rel_abundance)
+# # esperados (dataset global)
+# esp <- meta_bgcs %>%
+#   count(products) %>%
+#   mutate(rel_abundance = n / sum(n)) %>%
+#   arrange(desc(rel_abundance)) %>%
+#   rename(product = products, expected = rel_abundance)
+# # observados 
+# cases <- cases %>%
+#   left_join(rep_bgcs, by = c("Bgcs"="id")) #asignar productos a gccs de la red
+# obs <- cases %>%
+#   count(rep_bgc) %>%
+#   mutate(rel_abundance = n / sum(n)) %>%
+#   arrange(desc(rel_abundance)) %>%
+#   rename(product = rep_bgc, observed = rel_abundance)
+# 
+# enrichment <- obs %>%
+#   left_join(esp, by = "product") %>%
+#   mutate(log2_enrichment = log2(observed / expected)) %>%
+#   arrange(desc(log2_enrichment)) 
+# 
+# # grafica 
+# enrichment_plot <- enrichment %>%
+#   ggplot(aes(
+#     x = log2_enrichment,
+#     y = reorder(product, log2_enrichment),
+#   )) +
+#   geom_col() +
+#   geom_vline(xintercept = 0, linetype = "dashed") +
+#   theme_minimal() +
+#   labs(
+#     x = expression(Log[2](Observed/Expected)),
+#     y = "Biosynthetic product"
+#   )
 
-enrichment <- obs %>%
-  left_join(esp, by = "product") %>%
-  mutate(log2_enrichment = log2(observed / expected)) %>%
-  arrange(desc(log2_enrichment)) 
-
-# grafica 
-enrichment_plot <- enrichment %>%
-  ggplot(aes(
-    x = log2_enrichment,
-    y = reorder(product, log2_enrichment),
-  )) +
-  geom_col() +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  theme_minimal() +
-  labs(
-    x = expression(Log[2](Observed/Expected)),
-    y = "Biosynthetic product"
-  )
-
-
-### Save data & graphs ----
+### Save tables & graphs ----
 write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
-ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
+# ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
 
-#-----------------------
+#------------------------------------------
 #### MAG->BGC->MAG ####
-#-----------------------
+#------------------------------------------
 
-# Connect the production MAGs
-bgc_to_motu <- meta_bgcs %>%
+### Production x Interactions ----
+# List of the BGCs and the MAGs that produce them (and their respective groups GCCs and mOTUs)
+connection <- meta_bgcs %>%
   select(BGC, Genome, !!bgc_group) %>%
   left_join(meta_mags %>% select(Genome, !!mag_lineage), by = "Genome") %>%
   rename(bgc_id = BGC, gcc_id = !!bgc_group, motu_id = !!mag_lineage) %>%
   distinct()
-gcc_in_cases <- unique(cases$Bgcs) # keep only the GCCs that are in the network
+gcc_in_cases <- unique(cases$Bgcs) # the GCCs that are in the network
 
-### Edges ----
 # production edges (MAG -> BGC)
-production_edges <- bgc_to_motu %>%
-  filter(!is.na(motu_id), !is.na(gcc_id)) %>%
-  filter(gcc_id %in% gcc_in_cases) %>%
-  select(source = motu_id, target = gcc_id) %>%
-  distinct() %>%
-  mutate(weight = 1, type = "production")
+production_edges <- connection %>%
+  filter(!is.na(motu_id), !is.na(gcc_id)) %>% # keep just the groups
+  filter(gcc_id %in% gcc_in_cases) %>%   # keep the ones that are in the network
+  select(MAG_prod = motu_id, BGC = gcc_id) %>% # to identify the source
+  distinct() 
 
 # interaction edges (BGC -> MAG)
-interaction_edges <- edges %>%
-  mutate(type = "interaction")
+interaction_edges <- edges %>% 
+  select(BGC = source, MAG_targ = target, weight)  # to identify the target
 
-# Combine edges
-edges_mbm <- bind_rows(production_edges, interaction_edges)
+# paths of MAGp -> BGC -> MAGi (triplets)
+paths <- production_edges %>%
+  inner_join(
+    interaction_edges,
+    by = "BGC",
+    relationship = "many-to-many"   # these are all the possible combinations
+  ) %>%                             # of productions x interactions, we need to filter
+  filter(MAG_prod != MAG_targ)
+
+### FILTER BY SITES ----
+# we need to identify the paths that actually happen in at least 1 site
+
+paths_lits <- list()
+
+for (i in seq_len(nrow(paths))) {
+  magi <- paths$MAG_prod[i]  # for every pair of mags in a path
+  magj <- paths$MAG_targ[i]
+  
+  comb <- recreate_tableMM(magi, magj, mags_by_sites) # create the table of sites
+  # check if they co-occur 
+  shared_sites <- sum(comb[[magi]] > 0 & comb[[magj]] > 0) 
+  if(shared_sites > 0) {
+    paths_list[[i]] <- paths[i] %>%
+      mutate(oc_sites = shared_sites) # save sites for other filtering maybe?
+  }
+}
+
+real_paths <- bind_rows(paths_lits)
 
 
-### Nodes ----
-nodes_mbm <- tibble(
-  id = unique(c(edges_mbm$source, edges_mbm$target))) %>%
-  mutate(
-    type = case_when(
-      id %in% meta_mags[[mag_lineage]] ~ "MAG",
-      id %in% meta_bgcs[[bgc_group]] ~ "BGC",
-      TRUE ~ "other"))
-
-### Graph and degrees ----
-g_mbm <- graph_from_data_frame(d = edges_mbm, vertices = nodes_mbm, directed = TRUE)
-nodes_mbm$degree_in  <- degree(g_mbm, mode = "in")
-nodes_mbm$degree_out <- degree(g_mbm, mode = "out")
-nodes_mbm$degree_total <- degree(g_mbm, mode = "all")
-
-### Representative groups & colors ----
-nodes_mbm <- nodes_mbm %>%
-  left_join(rep_mags, by = "id") %>%
-  left_join(rep_bgcs, by = "id") %>%
-  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
-  select(-rep_bgc, -rep_mag)
-nodes_mbm <- nodes_mbm %>%
-  mutate(color = case_when(
-    type == "MAG" & color_group %in% top_mag_groups ~ 
-      mag_colors[match(color_group, top_mag_groups)],
-    type == "BGC" & color_group %in% top_bgc_groups ~ 
-      bgc_colors[match(color_group, top_bgc_groups)],
-    TRUE ~ "darkgrey"))
-
-### Save data ----
-write.csv(nodes_mbm, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
-write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
-
-#----------------
-#### MAG-MAG ####
-#----------------
-
-### Edges ----
+### EDGES ----
 # interaction: MAG <- BGC
 inter_mm <- interaction_edges %>%
   select(MAG = target, BGC = source, weight = weight)
 # production: MAG -> BGC
 prod_mm <- production_edges %>%
   select(MAG = source, BGC = target)
-# keep only MAGs
+# possible MAG-MAG mediated interactions
 edges_mm <- inter_mm %>%
-  inner_join(prod_mm, by = "BGC", relationship = "many-to-many") %>%
+  inner_join(prod_mm,
+             by = "BGC",
+             relationship = "many-to-many") %>%
   filter(MAG.x != MAG.y) %>%
-  transmute(source = MAG.y, target = MAG.x, weight = weight, bgc = BGC) 
+  transmute(source = MAG.y, target = MAG.x, weight = weight, bgc = BGC)
+#-------------------------------
+#### MAG->MAG (filtered) ####
+#-------------------------------
+edges_valid <- list()
+# este for 
+for(i in seq_len(nrow(edges_mm))) {
 
-### obtain nodes from edges ----
-nodes_mm <- tibble(id = unique(c(edges_mm$source, edges_mm$target)))
-nodes_mm <- nodes_mm %>%
-  left_join(meta_mags %>%
-      select(id = all_of(mag_lineage), family) %>%
-      distinct(),
-    by = "id")
-nodes_mm <- nodes_mm %>%
-  distinct(id, .keep_all = TRUE)
+  magi <- edges_mm$source[i]
+  magj <- edges_mm$target[i]
+  
+  if(!(magi %in% colnames(mags_by_sites))) next
+  if(!(magj %in% colnames(mags_by_sites))) next
+  
+  comb <- recreate_tableMM(magi = magi, magj = magj, mags_by_sites = mags_by_sites)
+  
+  # sites where both MAGs occur
+  shared_sites <- sum(comb[[magi]] > 0 & comb[[magj]] > 0)
+  
+  # keep only ecologically possible interactions
+  if(shared_sites > 0) {
+    edges_valid[[i]] <- edges_mm[i, ] %>%
+      mutate(shared_sites = shared_sites)
+  }
+}
 
-### add degrees ----
-g_mm <- graph_from_data_frame(d = edges_mm, vertices = nodes_mm, directed = TRUE)
-nodes_mm$degree_in  <- degree(g_mm, mode = "in")
-nodes_mm$degree_out <- degree(g_mm, mode = "out")
-nodes_mm$degree_total <- degree(g_mm, mode = "all")
+edges_mm_filtered <- bind_rows(edges_valid)
 
-### top nodes and colors ----
-top_nodes <- nodes_mm %>% 
-  arrange(desc(degree_total)) %>%
-  slice_head(n = 12)
-top_families <- unique(top_nodes$family)
-motu_colors <- substr(
-  as.vector(paletteer::paletteer_d(
-    palette = "ggthemes::calc",
-    n = length(top_families))), 1, 7)
 
-nodes_mm <- nodes_mm %>%
-  mutate(color = case_when(
-    family %in% top_families ~ 
-      motu_colors[match(family, top_families)],
-    TRUE ~ "darkgrey"))
+### COLLAPSE ----
+edges_mm_collapsed <- edges_mm_filtered %>%
+  mutate(
+    pair = map2_chr(
+      source,
+      target,
+      ~ paste(sort(c(.x, .y)), collapse = "_")
+    )
+  ) %>%
+  group_by(pair) %>%
+  summarise(
+    source = sort(unique(c(source, target)))[1],
+    target = sort(unique(c(source, target)))[2],
+    n_bgcs = n(),
+    bgcs = paste(unique(bgc), collapse = ";"),
+    shared_sites = max(shared_sites),
+    .groups = "drop"
+  )
 
-### save data ----
+
+
+### Save tables ----
 write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
 write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
 
-
-# these are all the possible cases were MAGs interact with MAGs based on the 
-# production, but this doesn't mean that these interactions are really happening
-# now we have to filter those possible cases that are not actually happening with
-# the MAGs-MAGs interactions process
-
 #-------------------------------
-#### MAG->MAG FILTERED ####
+#### MAG-->MAG (filtered) ####
 #-------------------------------
 
-# obtain a list of the bgcs in the network mbm
-# with a for, for each bgc, keep only the mag-mag interactions that are also in the cases_mm 
-
-# adaptar real_cases para que MAGi,MAGj sea igual que MAGj,MAGi
-real_cases <- real_cases %>%
-  transmute(
-    source = source,
-    target = target,
-    pair = map2_chr(source, target, ~ paste(sort(c(.x, .y)), collapse = "_")),
-    weight_mm = weight
-  ) 
-
-bgc_list <- unique(edges_mm$bgc)
-edges_filt <- list()
-
-for (bgc in bgc_list) {
-  sub_edges <- edges_mm %>%
-    filter(bgc == !!bgc)  %>%
-    mutate(pair = map2_chr(source, target, ~ paste(sort(c(.x, .y)), collapse = "_")))
-  
-  sub_filtered <- sub_edges %>%
-    semi_join(real_cases, by = "pair")
-  
-  if (nrow(sub_filtered) == 0) next
-  
-  edges_filt[[bgc]] <- sub_filtered
-}
-
-edges_mm_filt <- bind_rows(edges_filt)
-
-edges_mm_unique <- edges_mm_filt %>%
-  distinct(pair, .keep_all = TRUE)
-
-edges_mm_collapsed <- edges_mm_filt %>%
-  group_by(pair) %>%
-  summarise(
-    source = first(source),
-    target = first(target),
-    n_bgcs = n(),
-    bgcs = paste(unique(bgc), collapse = ";"),
-    .groups = "drop"
-  )
 
 
 
