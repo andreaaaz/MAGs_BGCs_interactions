@@ -40,15 +40,15 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 #### MAG<-BGC NETWORK ####
 #-------------------------
 
-### Nodes and Edges ----
+### NODES AND EDGES ----
 nodes <- tibble(
   id = unique(c(cases$Mags, cases$Bgcs)),    
   type = ifelse(id %in% cases$Mags, "MAG", "BGC"))
 
 edges <- cases %>%     #cases are already the edges, just rename it
-  rename(source = Bgcs, target = Mags, weight = fdr_pval_o)
+  rename(source = Bgcs, target = Mags, weight = fdr_pval_o) 
 
-### Graph and degree ----
+### GRAPH AND DEGREE ----
 g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
 nodes$degree <- degree(g)
 
@@ -56,10 +56,10 @@ nodes$degree <- degree(g)
 rep_bgcs <- meta_bgcs %>%    # table with all the GCCs and their products
   group_by(.data[[bgc_group]], products) %>%   
   summarise(n = n(), .groups = "drop_last") %>%   # count the most common
-  slice_max(order_by = n, n = 1) %>%.             # between each GCC
+  slice_max(order_by = n, n = 1) %>%             # between each GCC
   select(id = all_of(bgc_group), rep_bgc = products)
   
-rep_mags <- meta_mags %>%.    #table with all the mOTUs and their families
+rep_mags <- meta_mags %>%   #table with all the mOTUs and their families
   group_by(.data[[mag_lineage]], family) %>%
   summarise(n = n(), .groups = "drop_last") %>%
   slice_max(order_by = n, n = 1) %>%
@@ -178,17 +178,13 @@ interaction_edges <- edges %>%
 
 # paths of MAGp -> BGC -> MAGi (triplets)
 paths <- production_edges %>%
-  inner_join(
-    interaction_edges,
-    by = "BGC",
-    relationship = "many-to-many"   # these are all the possible combinations
-  ) %>%                             # of productions x interactions, we need to filter
+  inner_join(interaction_edges, by = "BGC", relationship = "many-to-many") %>%                             
   filter(MAG_prod != MAG_targ)
+# these are all the possible combinations of productions x interactions, we need to filter
 
 ### FILTER BY SITES ----
 # we need to identify the paths that actually happen in at least 1 site
-
-paths_lits <- list()
+paths_list <- list()
 
 for (i in seq_len(nrow(paths))) {
   magi <- paths$MAG_prod[i]  # for every pair of mags in a path
@@ -198,84 +194,58 @@ for (i in seq_len(nrow(paths))) {
   # check if they co-occur 
   shared_sites <- sum(comb[[magi]] > 0 & comb[[magj]] > 0) 
   if(shared_sites > 0) {
-    paths_list[[i]] <- paths[i] %>%
+    paths_list[[i]] <- paths[i, ] %>%
       mutate(oc_sites = shared_sites) # save sites for other filtering maybe?
   }
 }
 
-real_paths <- bind_rows(paths_lits)
+real_paths <- bind_rows(paths_list)
+# now we reconstruct the edges table 
 
+### Production x Interactions FILT ----
+# reconstruct de production and interaction tables and bind them
+production_edges <- real_paths %>%
+  select(source = MAG_prod, target = BGC) %>%
+  distinct() %>%
+  mutate(weight = 1, type = "production")
 
-### EDGES ----
-# interaction: MAG <- BGC
-inter_mm <- interaction_edges %>%
-  select(MAG = target, BGC = source, weight = weight)
-# production: MAG -> BGC
-prod_mm <- production_edges %>%
-  select(MAG = source, BGC = target)
-# possible MAG-MAG mediated interactions
-edges_mm <- inter_mm %>%
-  inner_join(prod_mm,
-             by = "BGC",
-             relationship = "many-to-many") %>%
-  filter(MAG.x != MAG.y) %>%
-  transmute(source = MAG.y, target = MAG.x, weight = weight, bgc = BGC)
-#-------------------------------
-#### MAG->MAG (filtered) ####
-#-------------------------------
-edges_valid <- list()
-# este for 
-for(i in seq_len(nrow(edges_mm))) {
+interaction_edges <- real_paths %>%
+  select(source = BGC, target = MAG_targ, weight) %>%
+  distinct() %>%
+  mutate(type = "interaction")
 
-  magi <- edges_mm$source[i]
-  magj <- edges_mm$target[i]
-  
-  if(!(magi %in% colnames(mags_by_sites))) next
-  if(!(magj %in% colnames(mags_by_sites))) next
-  
-  comb <- recreate_tableMM(magi = magi, magj = magj, mags_by_sites = mags_by_sites)
-  
-  # sites where both MAGs occur
-  shared_sites <- sum(comb[[magi]] > 0 & comb[[magj]] > 0)
-  
-  # keep only ecologically possible interactions
-  if(shared_sites > 0) {
-    edges_valid[[i]] <- edges_mm[i, ] %>%
-      mutate(shared_sites = shared_sites)
-  }
-}
+### NODES AND EDGES ----
+edges_mbm <-  bind_rows(production_edges, interaction_edges)
 
-edges_mm_filtered <- bind_rows(edges_valid)
+nodes_mbm <- bind_rows(
+  edges_mbm %>%
+    transmute(id = source, type = if_else(type == "production", "MAG", "BGC")),
+  edges_mbm %>%
+    transmute(id = target, type = if_else(type == "interaction", "MAG", "BGC")),
+) %>%
+  distinct()
 
+### GRAPH AND DEGREES ----
+g_mbm <- graph_from_data_frame(d = edges_mbm, vertices = nodes_mbm, directed = TRUE)
+nodes_mbm$degree_in  <- degree(g_mbm, mode = "in")
+nodes_mbm$degree_out <- degree(g_mbm, mode = "out")
+nodes_mbm$degree_total <- degree(g_mbm, mode = "all")  
 
-### COLLAPSE ----
-edges_mm_collapsed <- edges_mm_filtered %>%
-  mutate(
-    pair = map2_chr(
-      source,
-      target,
-      ~ paste(sort(c(.x, .y)), collapse = "_")
-    )
-  ) %>%
-  group_by(pair) %>%
-  summarise(
-    source = sort(unique(c(source, target)))[1],
-    target = sort(unique(c(source, target)))[2],
-    n_bgcs = n(),
-    bgcs = paste(unique(bgc), collapse = ";"),
-    shared_sites = max(shared_sites),
-    .groups = "drop"
-  )
-
+### Add representative groups ----
+nodes_mbm <- nodes_mbm %>%
+  left_join(rep_mags, by = "id") %>%
+  left_join(rep_bgcs, by = "id") %>%
+  mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
+  select(-rep_bgc, -rep_mag)
 
 
 ### Save tables ----
-write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
-write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
+write.csv(nodes_mbm, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
+write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 
-#-------------------------------
-#### MAG-->MAG (filtered) ####
-#-------------------------------
+#-------------------
+#### MAG-->MAG ####
+#-------------------
 
 
 

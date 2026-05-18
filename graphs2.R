@@ -3,8 +3,9 @@ meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
 meta_sites <- read.csv("~/metadata/meta_sites.csv")
 
 cases <- read.csv("~/metadata/oc_filt.csv")
-real_cases <- read.csv("~/edges_mm.csv")
 source("~/MAGs_BGCs_interactions/functions.R")
+cases_perm <- read.csv("~/cases_perm.csv")
+perm_results <- readRDS("~/perm_results.rds")
 ################################################
 #### ANALYSIS OF RESULTS #######################
 ## Andrea Zermeño Díaz #########################
