@@ -28,7 +28,7 @@ bgc_group <- opt$bgc_groups
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
 # results
-cases <- opt$file_mb
+cases <- read.csv(opt$file_mb)
 # functions
 source(paste0(opt$workdir, "functions.R"))
 # prep tables for the MAG-MAG filter
