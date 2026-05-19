@@ -17,7 +17,7 @@ library(ggplot2)
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
   make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
-  make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)"),
+  make_option(c("-t", "--temp"), type="character", default="mid", help="Range of temperature (max, mid and min)"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory")
@@ -63,7 +63,6 @@ mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 run_one_perm <- function(i, mags_by_sites, min_sites) {
   # set up
   start_perm <- Sys.time()
-  counter <- 0
   message("\nRunning permutation ", i)
   # para el resultado real
   if (i == 1) {
@@ -75,21 +74,24 @@ run_one_perm <- function(i, mags_by_sites, min_sites) {
   }
   
   cases_list <- list()
+  mag_cols <- colnames(mags_by_sites)
+  mag_cols <- mag_cols[mag_cols != "sites"]
+  n_mags <- length(mag_cols)
   
-  for (col1 in colnames(mags_perm)) {
-    if (col1 == "sites") next
+  for (i in 1:(n_mags - 1)) {
+    magi <- mag_cols[i]
     
     # progreso interno
-    counter <- counter + 1
-    if (counter %% 100 == 0) {
+    if (i %% 100 == 0) {
       elapsed <- difftime(Sys.time(), start_perm, units = "mins")
-      message("\n- Columns processed: ", counter, " | Time: ", round(elapsed, 2), " mins")
+      message("\n- Microbial lineages processed: ", i)
+      message("- Time: ", round(elapsed, 2), " mins ...")
     }
     
-    for (col2 in colnames(bgcs_by_sites)) {
-      if (col2 == "sites") next
+    for (j in (i + 1):n_mags) {
       
-      res <- mut_infoMB(col1, col2, mags_perm, bgcs_by_sites, min_sites)
+      magj <- mag_cols[j]
+      res <- mut_infoMM(magi, magj, mags_perm, min_sites)
       
       if (!is.null(res)) {
         cases_list[[length(cases_list) + 1]] <- res
@@ -111,7 +113,6 @@ perm_results <- mclapply(
   1:n_perm,
   run_one_perm,
   mags_by_sites = mags_by_sites,
-  bgcs_by_sites = bgcs_by_sites,
   min_sites = min_sites,
   mc.cores = ncores
 )
@@ -201,4 +202,4 @@ ggplot(cases_perm, aes(x = NMI, fill = factor(perm))) +
 
 #### Save info ####
 
-write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)
+write.csv(cases_perm, paste0(opt$outdir, "cases_permMM.csv"), row.names = FALSE)
