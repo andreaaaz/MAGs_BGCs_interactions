@@ -72,8 +72,7 @@ process NETWORKS_MM {
     tuple val(temp), path(oc_file)
 
     output:
-    tuple val(temp), path("edges_mm.csv"), emit: edges_mm
-    path "*"
+    path "*.csv"
 
     script:
     """
@@ -81,7 +80,7 @@ process NETWORKS_MM {
         -m ${params.microbial_lineage} \
         -i ${params.indir} \
         -f ${oc_file} \
-        -o ./ \
+        -o ./ 
     """
 
 }
@@ -93,7 +92,7 @@ process NETWORKS_MB {
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
     input:
-    tuple val(temp), path(oc_mb), path(edges_mm)
+    tuple val(temp), path(oc_mb)
 
     output:
     path "*.csv"
@@ -117,15 +116,13 @@ workflow {
     
     temp_ch = Channel.fromList(params.temps)
     
+    // interacciones 
     mag_bgc_out = MAG_BGC(temp_ch)
-
     mag_mag_out = MAG_MAG(temp_ch)
     
-    networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
-
-    combined = mag_bgc_out.oc_filt.join(networks_mm_out.edges_mm)
-
-    NETWORKS_MB(combined)
+    // redes
+    NETWORKS_MB(mag_bgc_out.oc_filt)
+    NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
 }
 
