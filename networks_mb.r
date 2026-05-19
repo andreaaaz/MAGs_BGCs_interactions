@@ -238,7 +238,6 @@ nodes_mbm <- nodes_mbm %>%
   mutate(color_group = if_else(type == "MAG", rep_mag, rep_bgc)) %>%
   select(-rep_bgc, -rep_mag)
 
-
 ### Save tables ----
 write.csv(nodes_mbm, paste0(opt$outdir, "nodes_mbm.csv"), row.names = FALSE)
 write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
@@ -247,7 +246,27 @@ write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 #### MAG-->MAG ####
 #-------------------
 
+### NODES AND EDGES ----
+# we use the previous filtered paths to create the edges table
+edges_mm <- real_paths %>%
+  transmute(source = MAG_prod, target = MAG_targ, bgc = BGC, 
+            oc_sites = oc_sites, weight)
 
+nodes_mm <- tibble(id = unique(c(edges_mm$source, edges_mm$target)))
 
+### GRAPH AND DEGREES ----
+g_mm <- graph_from_data_frame(d = edges_mm, vertices = nodes_mm, directed = TRUE)
+nodes_mm$degree_in  <- degree(g_mm, mode = "in")
+nodes_mm$degree_out <- degree(g_mm, mode = "out")
+nodes_mm$degree_total <- degree(g_mm, mode = "all")  
 
+### Add representative groups ----
+nodes_mm <- nodes_mm %>%
+  left_join(rep_mags, by = "id") %>%
+  mutate(color_group = rep_mag) %>%
+  select(-rep_mag)
+
+### Save tables ----
+write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
+write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
 
