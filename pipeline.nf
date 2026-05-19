@@ -105,8 +105,7 @@ process NETWORKS_MB {
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
-        -f ${oc_mb} \
-        -d ${edges_mm} \
+        -f ${oc_mb} 
     """
 
 }
