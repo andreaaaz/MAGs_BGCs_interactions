@@ -204,7 +204,25 @@ ggplot(cases_perm, aes(x = NMI, fill = factor(perm))) +
     title = "Distribution of NMI values"
   )
 
-
 #### Save info ####
-
 write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)
+
+
+#### P-VALUES ####
+# distribution of all the null NMI 
+null_dist <- cases_perm %>%
+  filter(type == "perm") %>%
+  pull(NMI)
+# real cases
+real_cases <- cases_perm %>%
+  filter(type == "real")
+
+# calculate p-value with null distribution
+real_cases <- real_cases %>%
+  rowwise() %>%
+  mutate(n_null = length(null_dist), n_extreme = sum(null_dist >= NMI), 
+         p_value = (n_extreme + 1) / (n_null + 1)) %>%  # se va a tardar
+  ungroup()
+
+
+
