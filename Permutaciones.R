@@ -210,19 +210,29 @@ write.csv(cases_perm, paste0(opt$outdir, "cases_perm.csv"), row.names = FALSE)
 
 #### P-VALUES ####
 # distribution of all the null NMI 
+
+
+
 null_dist <- cases_perm %>%
-  filter(type == "perm") %>%
-  pull(NMI)
+  pull(NMI) 
 # real cases
 real_cases <- cases_perm %>%
   filter(type == "real")
+# function of the null distribution (is faster to calculate the p-values with this)
+null_fun <- ecdf(null_dist)  
+real_cases <- real_cases %>% 
+  mutate(p_value = 1 - null_fun(NMI)) 
 
-# calculate p-value with null distribution
-real_cases <- real_cases %>%
-  rowwise() %>%
-  mutate(n_null = length(null_dist), n_extreme = sum(null_dist >= NMI), 
-         p_value = (n_extreme + 1) / (n_null + 1)) %>%  # se va a tardar
-  ungroup()
+# filtrar BGC que estan en el genoma BUG: need to add tables and lienages
+meta_bgcs <- meta_bgcs %>%
+  left_join(meta_mags %>% select(Genome, all_of(mag_lineage)), by = "Genome") # add lineage to bgc table by genome
+real_cases <- real_cases %>% 
+  anti_join(meta_bgcs, by = c("Mags" = mag_lineage, "Bgcs" = bgc_group)) 
 
+### Distribucion p-values
 
+ggplot(real_cases, aes(x = p_value)) +
+  geom_histogram(binwidth = 0.05, fill = "#044a88", bins = 50) +
+  labs(x = "p-value", y = "Frequency") +
+  theme_minimal()
 
