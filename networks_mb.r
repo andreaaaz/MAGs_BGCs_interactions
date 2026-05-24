@@ -13,24 +13,43 @@ library(paletteer)
 ### ARGS ---- 
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
-  make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
+  make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the group"),
   make_option(c("-f", "--file_mb"), type="character", help="file with oc cases"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
-  make_option(c("-w", "--workdir"), type="character", help="Working directory")
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-t", "--temp"), type="character", default="low", help="Range of temperature (max, mid and min)")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 mag_lineage <- opt$microbial_lineage
 bgc_group <- opt$bgc_groups
+temp_r <- opt$temp
 
 ### DATA LOAD ----
 # metadata
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
+meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv.csv'), header = TRUE)
 # results
 cases <- read.csv(opt$file_mb)
 # functions
 source(paste0(opt$workdir, "functions.R"))
+
+### TEMPERATURE ----
+temp_range <- NULL
+# definir el rango
+if (temp_r == "low") temp_range <- c(-2, 9)
+if (temp_r == "mid") temp_range <- c(10, 20)
+if (temp_r == "high") temp_range <- c(21, 35)
+if (temp_r != "global") {
+  meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
+    filter(between(temperature_..C., temp_range[1], temp_range[2]))
+}
+# filtrar MAGs y BGCa por sitios
+meta_mags <- meta_mags %>%           
+  semi_join(meta_sites, by = "sites")
+meta_bgcs <- meta_bgcs %>%           
+  semi_join(meta_sites, by = "sites")
 # prep tables for the MAG-MAG filter
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
@@ -248,9 +267,14 @@ write.csv(edges_mbm, paste0(opt$outdir, "edges_mbm.csv"), row.names = FALSE)
 
 ### NODES AND EDGES ----
 # we use the previous filtered paths to create the edges table
+# edges_mm <- real_paths %>%
+#   transmute(source = MAG_prod, target = MAG_targ, bgc = BGC, 
+#             oc_sites = oc_sites, weight)
 edges_mm <- real_paths %>%
-  transmute(source = MAG_prod, target = MAG_targ, bgc = BGC, 
-            oc_sites = oc_sites, weight)
+  group_by(MAG_prod, MAG_targ) %>%
+  summarise(n_bgcs = n(), bgcs = paste(unique(BGC), collapse = ";"), 
+            oc_sites = max(oc_sites), weight = mean(weight), .groups = "drop") %>%
+  rename(source = MAG_prod, target = MAG_targ)
 
 nodes_mm <- tibble(id = unique(c(edges_mm$source, edges_mm$target)))
 
