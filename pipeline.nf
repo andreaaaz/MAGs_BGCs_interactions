@@ -102,6 +102,7 @@ process NETWORKS_MB {
     Rscript ${projectDir}/networks_mb.r \
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
+        -t ${temp} \
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
