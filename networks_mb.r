@@ -29,7 +29,7 @@ temp_r <- opt$temp
 # metadata
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
 meta_bgcs <- read.csv(file = paste0(opt$indir, 'bgcs_metadata.csv'), header = TRUE)
-meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv.csv'), header = TRUE)
+meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE)
 # results
 cases <- read.csv(opt$file_mb)
 # functions

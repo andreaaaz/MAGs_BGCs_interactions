@@ -15,17 +15,25 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   comb[[magi]] <- ifelse(is.na(comb[[magi]]), 0, comb[[magi]])
   comb[[magj]] <- ifelse(is.na(comb[[magj]]), 0, comb[[magj]])
   
+  # filtar dobles 0 en la tabla 
   comb <- comb[!(comb[[magi]] == 0 & comb[[magj]] == 0), ]
-  
+  # descartar tablas vacias
   if (nrow(comb) == 0) return(NULL)
-  
+  # obtener sitios donde aparecen
   magi_sites <- sum(comb[[magi]] > 0) 
   magj_sites <- sum(comb[[magj]] > 0)
+  n <- length(comb)
   
+  # quitar tabla en donde el mag o el bgc este en pocos sitios
   if (magi_sites < min_sites || magj_sites < min_sites) return(NULL)
   
-  q <- magi_sites / total_sites
-  p <- magj_sites / total_sites
+  # foroma menos estricta sitios totales
+  # q <- magi_sites / total_sites
+  # p <- magj_sites / total_sites
+  
+  q <- magi_sites/n
+  p <- magj_sites/n
+  
   
   pi_e <- p - 2*p*q + q
   pi_o <- p * q
