@@ -61,7 +61,6 @@ mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 
 # tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
-total_sites <- length(mags_by_sites)
 # para imprimir avance
 start_time <- Sys.time()
 # para recorrer las columnas de mags_by_sites
@@ -87,11 +86,11 @@ for (i in 1:(n_mags - 1)) {
     
     magj <- mag_cols[j]
     
-    res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
+    res <- binomial_MM(magi, magj, mags_by_sites, min_sites)
     
     # choosing method
     if (method == "binomial") {
-      res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
+      res <- binomial_MM(magi, magj, mags_by_sites, min_sites)
     } else if (method == "mutual") {
       res <- mut_infoMM(magi, magj, mags_by_sites, min_sites)
     } else {
