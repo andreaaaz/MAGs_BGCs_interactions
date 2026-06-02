@@ -69,7 +69,6 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
 # tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
-total_sites <- length(mags_by_sites)
 #para imprimir avance
 counter <- 0
 start_time <- Sys.time()
@@ -98,7 +97,7 @@ for (col1 in colnames(mags_by_sites)) {
     
     # choosing method
     if (method == "binomial") {
-      res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites, total_sites)
+      res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites)
     } else if (method == "mutual") {
       res <- mut_infoMB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites)
     } else {
