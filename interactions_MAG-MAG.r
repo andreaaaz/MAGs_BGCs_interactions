@@ -87,11 +87,9 @@ for (i in 1:(n_mags - 1)) {
     
     magj <- mag_cols[j]
     
-    res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
-    
     # choosing method
     if (method == "binomial") {
-      res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
+      res <- binomial_MM(magi, magj, mags_by_sites, min_sites)
     } else if (method == "mutual") {
       res <- mut_infoMM(magi, magj, mags_by_sites, min_sites)
     } else {

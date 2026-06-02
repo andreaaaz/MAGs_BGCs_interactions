@@ -5,7 +5,7 @@
 # Make table combined by sites and calculate the p-value of co-exclusion and co-occurrence
 
 ### For interactions MAG-MAG ###
-binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
+binomial_MM <- function(magi, magj, mags_by_sites, min_sites) {
   
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
@@ -18,11 +18,12 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   # filtar dobles 0 en la tabla 
   comb <- comb[!(comb[[magi]] == 0 & comb[[magj]] == 0), ]
   # descartar tablas vacias
-  if (nrow(comb) == 0) return(NULL)
+  n <- nrow(comb)
+  if (n == 0) return(NULL)
   # obtener sitios donde aparecen
   magi_sites <- sum(comb[[magi]] > 0) 
   magj_sites <- sum(comb[[magj]] > 0)
-  n <- length(comb)
+  
   
   # quitar tabla en donde el mag o el bgc este en pocos sitios
   if (magi_sites < min_sites || magj_sites < min_sites) return(NULL)
@@ -54,13 +55,13 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
     p = p,
     pi_exclusion = pi_e,
     pi_occurrence = pi_o,
-    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
-    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
+    pvalue_e = 1 - pbinom(ex_sites, n, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, n, pi_o)
   ))
 }
 
 ### For MAG-BGC interactions ###
-binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites) {
+binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites) {
   
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
   table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
@@ -72,15 +73,16 @@ binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites
   
   temp3 <- temp3[!(temp3[[mag]] == 0 & temp3[[bgc]] == 0), ]
   
-  if (nrow(temp3) == 0) return(NULL)
+  n <- nrow(temp3)
+  if (n == 0) return(NULL)
   
   mag_sites <- sum(temp3[[mag]] > 0) 
   bgc_sites <- sum(temp3[[bgc]] > 0)
   
   if (mag_sites < min_sites || bgc_sites < min_sites) return(NULL)
   
-  q <- mag_sites / total_sites
-  p <- bgc_sites / total_sites
+  q <- mag_sites / n
+  p <- bgc_sites / n
   
   pi_e <- p - 2*p*q + q
   pi_o <- p * q
@@ -101,8 +103,8 @@ binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites
     p = p,
     pi_exclusion = pi_e,
     pi_occurrence = pi_o,
-    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
-    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
+    pvalue_e = 1 - pbinom(ex_sites, n, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, n, pi_o)
   ))
 }
 
