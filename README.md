@@ -22,11 +22,14 @@ We build networks with the results of co-occurrence cases. Depending if the case
 #### Workflow so far...
 
 Temperatures:     
-global ----|  |--> interactions_MAG-MAG.r --> networks_mm.r --|
-high   ----|->|                                               |---> info_networks.r
-mid    ----|  |--> interactions_MAG-BGC.r --> networks_mb.r --| 
-log    ----|
+```text
+Temperatures:
 
+global ----|  |--> interactions_MAG-MAG.r --> networks_mm.r --|
+high   ----|->|                                               |--> info_networks.r
+mid    ----|  |--> interactions_MAG-BGC.r --> networks_mb.r --|
+low    ----|
+```
 
 #### Manual
 
