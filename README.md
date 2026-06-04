@@ -53,20 +53,19 @@ $ nextflow run MAGs_BGCs_interactions/pipeline.nf \
 
 As we have 2 way of ifentify interaction and 4 temperatures, we have 8 reults. These results are saved in diferent directories: ```exp/interactions/${microbial_lineage}_${bgc_groups}/${temperature}/``` or ```exp/interactions/${microbial_lineage}_${microbial_lineage}/${temperature}/```. The output of the command example will be saved in this order:
 
-
-interactions/ -
-              |-mOTUs_Species_Cluster_gcc/ -
-              |                            |- global/ -
-              |                            |          |- all_cases.csv
-              |                            |          |- ex_cases.csv
-              |                            |          |- oc_cases.csv
-              |                            |
-              |                            |- high/
-              |                            |- mid/
-              |                            |- low/ 
-              |
-              |-mOTUs_Species_Cluster_mOTUs_Species_Cluster/ 
-                                                              
+```text
+interactions/
+├─ mOTUs_Species_Cluster_gcc/
+│   ├─ global/
+│   │   ├─ all_cases.csv
+│   │   ├─ ex_cases.csv
+│   │   └─ oc_cases.csv
+│   ├─ high/
+│   ├─ mid/
+│   └─ low/
+│
+└─ mOTUs_Species_Cluster_mOTUs_Species_Cluster/
+```                                                              
                                      
 ## Acknowledgments
 
