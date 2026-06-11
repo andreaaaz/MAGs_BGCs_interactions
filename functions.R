@@ -61,7 +61,8 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites) {
 }
 
 ### For MAG-BGC interactions ###
-binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites) {
+# mas estricta
+binomial_MB2 <- function(mag, bgc, m_by_sites, b_by_sites, min_sites) {
   
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
   table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
@@ -101,13 +102,60 @@ binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites) {
     oc_sites = oc_sites,
     q = q,
     p = p,
+    n = n,
     pi_exclusion = pi_e,
     pi_occurrence = pi_o,
     pvalue_e = 1 - pbinom(ex_sites, n, pi_e),
     pvalue_o = 1 - pbinom(oc_sites, n, pi_o)
   ))
 }
-
+# menos estricta 
+binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites) {
+  
+  table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
+  table2 <- b_by_sites[, c("sites", bgc), drop = FALSE]
+  
+  temp3 <- full_join(table1, table2, by = "sites")
+  
+  temp3[[mag]] <- ifelse(is.na(temp3[[mag]]), 0, temp3[[mag]])
+  temp3[[bgc]] <- ifelse(is.na(temp3[[bgc]]), 0, temp3[[bgc]])
+  
+  temp3 <- temp3[!(temp3[[mag]] == 0 & temp3[[bgc]] == 0), ]
+  
+  n <- nrow(temp3)
+  if (n == 0) return(NULL)
+  
+  mag_sites <- sum(temp3[[mag]] > 0) 
+  bgc_sites <- sum(temp3[[bgc]] > 0)
+  
+  if (mag_sites < min_sites || bgc_sites < min_sites) return(NULL)
+  
+  q <- mag_sites / total_sites
+  p <- bgc_sites / total_sites
+  
+  pi_e <- p - 2*p*q + q
+  pi_o <- p * q
+  
+  ex_sites <- sum((temp3[[mag]] == 0 & temp3[[bgc]] > 0) |
+                    (temp3[[mag]] > 0 & temp3[[bgc]] == 0))
+  
+  oc_sites <- sum((temp3[[mag]] > 0) & (temp3[[bgc]] > 0))
+  
+  return(list(
+    Mags = mag, 
+    Bgcs = bgc,
+    mags_sites = mag_sites, 
+    bgcs_sites = bgc_sites,
+    ex_sites = ex_sites,
+    oc_sites = oc_sites,
+    q = q,
+    p = p,
+    pi_exclusion = pi_e,
+    pi_occurrence = pi_o,
+    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
+  ))
+}
 
 #### Mutual Information ####
 

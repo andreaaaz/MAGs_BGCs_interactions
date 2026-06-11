@@ -12,13 +12,13 @@ library(optparse)
 # Args
 option_list <- list(
   make_option(c("-m", "--microbial_lineage"), type="character", default="mOTUs_Species_Cluster", help="Name of the microbial lienage"),
-  make_option(c("-b", "--bgc_groups"), type="character", default="gcf", help="Name of the grou"),
-  make_option(c("-s", "--minimum_sites"), type="numeric", default=10, help="Minimum number of sites where a group is present"),
+  make_option(c("-b", "--bgc_groups"), type="character", default="gcc", help="Name of the grou"),
+  make_option(c("-s", "--minimum_sites"), type="numeric", default=5, help="Minimum number of sites where a group is present"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
   make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)"),
-  make_option(c("-e", "--method"), type="character", default="mutual", help="Method to calculate significance")
+  make_option(c("-e", "--method"), type="character", default="binomial", help="Method to calculate significance")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -77,6 +77,7 @@ start_time <- Sys.time()
 # donde 'm' es el numero de microbial lienages
 # y 'b' es el numero de grupos de BGCs 
 
+total_sites <- nrow(mags_by_sites)
 
 for (col1 in colnames(mags_by_sites)) {
   if (col1 == "sites") next
@@ -97,7 +98,7 @@ for (col1 in colnames(mags_by_sites)) {
     
     # choosing method
     if (method == "binomial") {
-      res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites)
+      res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites, total_sites)
     } else if (method == "mutual") {
       res <- mut_infoMB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites)
     } else {
