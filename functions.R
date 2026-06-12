@@ -5,7 +5,7 @@
 # Make table combined by sites and calculate the p-value of co-exclusion and co-occurrence
 
 ### For interactions MAG-MAG ###
-binomial_MM <- function(magi, magj, mags_by_sites, min_sites) {
+binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
   
   table1 <- mags_by_sites[, c("sites", magi), drop = FALSE]
   table2 <- mags_by_sites[, c("sites", magj), drop = FALSE]
@@ -32,8 +32,8 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites) {
   # q <- magi_sites / total_sites
   # p <- magj_sites / total_sites
   
-  q <- magi_sites/n
-  p <- magj_sites/n
+  q <- magi_sites/total_sites
+  p <- magj_sites/total_sites
   
   
   pi_e <- p - 2*p*q + q
@@ -109,7 +109,7 @@ binomial_MB2 <- function(mag, bgc, m_by_sites, b_by_sites, min_sites) {
     pvalue_o = 1 - pbinom(oc_sites, n, pi_o)
   ))
 }
-# menos estricta 
+# menos estricta
 binomial_MB <- function(mag, bgc, m_by_sites, b_by_sites, min_sites, total_sites) {
   
   table1 <- m_by_sites[, c("sites", mag), drop = FALSE]
