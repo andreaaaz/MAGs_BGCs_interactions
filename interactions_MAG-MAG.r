@@ -71,8 +71,6 @@ n_mags <- length(mag_cols)
 # esto generara 'm x m' tablas de 806 renglones (sitios definidos por station_depth)
 # donde 'm' es el numero de microbial lienages
 
-
-
 for (i in 1:(n_mags - 1)) {
   
   magi <- mag_cols[i]
@@ -89,7 +87,7 @@ for (i in 1:(n_mags - 1)) {
     
     # choosing method
     if (method == "binomial") {
-      res <- binomial_MM(magi, magj, mags_by_sites, min_sites)
+      res <- binomial_MM(magi, magj, mags_by_sites, min_sites, total_sites)
     } else if (method == "mutual") {
       res <- mut_infoMM(magi, magj, mags_by_sites, min_sites)
     } else {
