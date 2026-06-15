@@ -52,8 +52,6 @@ meta_bgcs <- meta_bgcs %>%
   semi_join(meta_sites, by = "sites")
 # prep tables for the MAG-MAG filter
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
-bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
-# deberia de filtrar tambien por temperatura????
 
 #-------------------------
 #### MAG<-BGC NETWORK ####
