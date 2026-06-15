@@ -52,6 +52,24 @@ $ nextflow run MAGs_BGCs_interactions/pipeline.nf \
     --method binomial
 ```
 
+The command produce this output:
+
+```bash
+ N E X T F L O W   ~  version 25.10.4
+
+Launching `MAGs_BGCs_interactions/pipeline.nf` [gigantic_mclean] DSL2 - revision: c64bca975b
+
+executor >  slurm (16)
+[e1/ffa571] MAG_BGC (global)     | 4 of 4 ✔
+[ca/75a238] MAG_MAG (global)     | 4 of 4 ✔
+[c1/62fb72] NETWORKS_MB (global) | 4 of 4 ✔
+[b7/c9e34f] NETWORKS_MM (global) | 4 of 4 ✔
+Completed at: 12-Jun-2026 00:52:57
+Duration    : 6h 46m 59s
+CPU hours   : 15.7
+Succeeded   : 16
+```
+
 #### Output saving
 
 As we have 2 way of ifentify interaction and 4 temperatures, we have 8 reults. These results are saved in diferent directories: ```exp/interactions/${microbial_lineage}_${bgc_groups}/${temperature}/``` or ```exp/interactions/${microbial_lineage}_${microbial_lineage}/${temperature}/```. The output of the command example will be saved in this order:
