@@ -43,7 +43,7 @@ nodes$degree <- degree(g)
 rep_mags <- meta_mags %>%
   group_by(.data[[mag_lineage]], family) %>%
   summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
   select(id = all_of(mag_lineage), rep_mag = family)
 
 nodes <- nodes %>%
