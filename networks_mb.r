@@ -73,13 +73,13 @@ nodes$degree <- degree(g)
 rep_bgcs <- meta_bgcs %>%    # table with all the GCCs and their products
   group_by(.data[[bgc_group]], products) %>%   
   summarise(n = n(), .groups = "drop_last") %>%   # count the most common
-  slice_max(order_by = n, n = 1) %>%             # between each GCC
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%             # between each GCC
   select(id = all_of(bgc_group), rep_bgc = products)
   
 rep_mags <- meta_mags %>%   #table with all the mOTUs and their families
   group_by(.data[[mag_lineage]], family) %>%
   summarise(n = n(), .groups = "drop_last") %>%
-  slice_max(order_by = n, n = 1) %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
   select(id = all_of(mag_lineage), rep_mag = family)
 # add the representative groups to the node information
 nodes <- nodes %>%
