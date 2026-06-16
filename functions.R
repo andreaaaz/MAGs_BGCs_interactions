@@ -55,8 +55,8 @@ binomial_MM <- function(magi, magj, mags_by_sites, min_sites, total_sites) {
     p = p,
     pi_exclusion = pi_e,
     pi_occurrence = pi_o,
-    pvalue_e = 1 - pbinom(ex_sites, n, pi_e),
-    pvalue_o = 1 - pbinom(oc_sites, n, pi_o)
+    pvalue_e = 1 - pbinom(ex_sites, total_sites, pi_e),
+    pvalue_o = 1 - pbinom(oc_sites, total_sites, pi_o)
   ))
 }
 
