@@ -153,9 +153,7 @@ library(tidyverse)
 
 set.seed(123)
 
-#---------------------------------------
 # Función para simular un par MAG-BGC
-#---------------------------------------
 
 simulate_pair <- function(total_sites = 256){
 
@@ -167,15 +165,8 @@ simulate_pair <- function(total_sites = 256){
   mag <- rbinom(total_sites, 1, q_real)
   bgc <- rbinom(total_sites, 1, p_real)
 
-  dat <- tibble(
-    mag = mag,
-    bgc = bgc
-  )
-
-  #-----------------------------------
-  # MÉTODO 1 (todos los sitios)
-  #-----------------------------------
-
+  dat <- tibble(mag = mag, bgc = bgc)
+# MÉTODO 1 (todos los sitios)
   mag_sites1 <- sum(dat$mag)
   bgc_sites1 <- sum(dat$bgc)
 
@@ -187,26 +178,18 @@ simulate_pair <- function(total_sites = 256){
 
   oc1 <- sum(dat$mag == 1 & dat$bgc == 1)
 
-  ex1 <- sum(
-    (dat$mag == 1 & dat$bgc == 0) |
-    (dat$mag == 0 & dat$bgc == 1)
-  )
+  ex1 <- sum((dat$mag == 1 & dat$bgc == 0) | (dat$mag == 0 & dat$bgc == 1))
 
   pval_o1 <- 1 - pbinom(oc1, total_sites, pi_o1)
   pval_e1 <- 1 - pbinom(ex1, total_sites, pi_e1)
-
-  #-----------------------------------
+  
   # MÉTODO 2 (sin dobles ceros)
-  #-----------------------------------
-
   dat2 <- dat %>%
     filter(!(mag == 0 & bgc == 0))
 
   n2 <- nrow(dat2)
 
-  if(n2 == 0){
-    return(NULL)
-  }
+  if(n2 == 0){return(NULL)}
 
   mag_sites2 <- sum(dat2$mag)
   bgc_sites2 <- sum(dat2$bgc)
@@ -219,30 +202,14 @@ simulate_pair <- function(total_sites = 256){
 
   oc2 <- sum(dat2$mag == 1 & dat2$bgc == 1)
 
-  ex2 <- sum(
-    (dat2$mag == 1 & dat2$bgc == 0) |
-    (dat2$mag == 0 & dat2$bgc == 1)
-  )
+  ex2 <- sum((dat2$mag == 1 & dat2$bgc == 0) | (dat2$mag == 0 & dat2$bgc == 1))
 
   pval_o2 <- 1 - pbinom(oc2, n2, pi_o2)
   pval_e2 <- 1 - pbinom(ex2, n2, pi_e2)
-
-  tibble(
-    p_real,
-    q_real,
-
-    p1, q1,
-    p2, q2,
-
-    pi_o1, pi_e1,
-    pi_o2, pi_e2,
-
-    pval_o1,
-    pval_o2,
-
-    pval_e1,
-    pval_e2
-  )
+  
+  tibble(p_real, q_real, 
+         p1, q1, p2, q2, 
+         pi_o1, pi_e1, pi_o2, pi_e2, pval_o1, pval_o2, pval_e1, pval_e2)
 }
 
 #---------------------------------------
@@ -252,9 +219,25 @@ simulate_pair <- function(total_sites = 256){
 sim <- map_dfr(1:10000, ~simulate_pair())
 
 
+sim %>%
+  pivot_longer(cols = c(pval_e1, pval_e2), names_to = "method", values_to = "pvalue") %>% 
+  ggplot(aes(x = pvalue)) +
+  geom_histogram(bins = 50) + 
+  facet_wrap(~method) +
+  theme_minimal()
+sim %>%
+  pivot_longer(cols = c(pval_o1, pval_o2), names_to = "method", values_to = "pvalue") %>% 
+  ggplot(aes(x = pvalue)) +
+  geom_histogram(bins = 50) + 
+  facet_wrap(~method) +
+  theme_minimal()
 
 
 ggplot(sim, aes(x = pi_e1, y = pi_e2)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(linetype = 2) +
+  theme_minimal()
+ggplot(sim, aes(x = pi_o1, y = pi_o2)) +
   geom_point(alpha = 0.2) +
   geom_abline(linetype = 2) +
   theme_minimal()

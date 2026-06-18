@@ -2,7 +2,7 @@ meta_mags <- read.csv("~/metadata/metadata.csv")
 meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
 meta_sites <- read.csv("~/metadata/meta_sites.csv")
 
-cases <- read.csv("~/mOTUs_Species_Cluster_gcc/global/oc_filt.csv")
+cases <- read.csv("~/mOTUs_Species_Cluster_gcc/mid/oc_filt.csv")
 source("~/MAGs_BGCs_interactions/functions.R")
 cases_perm <- read.csv("~/cases_perm.csv")
 perm_results <- readRDS("~/perm_results.rds")
@@ -268,7 +268,28 @@ gcc_22 <- meta_bgcs %>%
 mOTU5467 <- meta_mags %>%
   filter(mOTUs_Species_Cluster == "ref_mOTU_v25_05467")
 
+pseudoalteromonas <- meta_mags %>%
+  filter(genus == "Pseudoalteromonas")
 
+library(tidyverse)
+library(terra)
+library(sf)
+library(rnaturalearth)
 
+# contar Pseudoalteromonas por sitio
+pseudo_sites <- pseudoalteromonas %>%
+  count(longitude, latitude, name = "n")
 
+# mapa mundial
+world <- ne_countries(scale = "medium",returnclass = "sf")
+
+ggplot() +
+  theme_void() +
+  theme(panel.background = element_rect(fill = "#b4d3e2"),
+        plot.background = element_rect(fill = "#b4d3e2")) +
+  geom_sf(data = world, fill = "#5b6684", color = "#5b6684", linewidth = 0.2) +
+  geom_point(data = pseudo_sites, aes(x = longitude, y = latitude, size = n), 
+              color = "darkblue", alpha = 0.75) +
+  scale_size_continuous(name = "N° MAGs", range = c(1, 3)) +
+  coord_sf(expand = FALSE) 
 
