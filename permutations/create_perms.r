@@ -30,8 +30,10 @@ meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE
 if (temp_r == "low") temp_range <- c(-2, 9)
 if (temp_r == "mid") temp_range <- c(10, 20)
 if (temp_r == "high") temp_range <- c(21, 35)
-if (temp_r != "global") {
-  real_sites <- meta_sites %>%   # filtrar sitios por temperatura
+if (temp_r == "global") {
+  real_sites <- meta_sites
+} else {
+  real_sites <- meta_sites %>%
     filter(between(temperature_..C., temp_range[1], temp_range[2]))
 }
 
@@ -48,8 +50,10 @@ for (i in 1:nperms) {
   if (temp_r == "low") temp_range <- c(-2, 9)
   if (temp_r == "mid") temp_range <- c(10, 20)
   if (temp_r == "high") temp_range <- c(21, 35)
-  if (temp_r != "global") {
-    sites_perm <- sites_perm %>%   # filtrar sitios por temperatura
+  if (temp_r == "global") {
+    sites_perm <- sites_perm
+  } else {
+    sites_perm <- sites_perm %>%
       filter(between(temperature_..C., temp_range[1], temp_range[2]))
   }
   
