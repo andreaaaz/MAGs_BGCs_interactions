@@ -31,13 +31,6 @@ process PERMUTE_SITES {
   """
 }
 
-perms.perms
-     .flatMap { temp, files ->
-         files.collect { f ->
-             tuple(temp, f)
-         }
-     }
-     .view()
 
 process INTERACTIONS {
 
@@ -68,13 +61,7 @@ workflow {
 
     perms = PERMUTE_SITES(temp_ch)
 
-    perms.perms
-         .flatMap { temp, files ->
-             files.collect { f ->
-                 tuple(temp, f)
-             }
-         }
-         | INTERACTIONS
+    perms.perms.view()
 }
 
 
