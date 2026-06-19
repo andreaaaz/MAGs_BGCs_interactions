@@ -61,7 +61,12 @@ workflow {
 
     perms = PERMUTE_SITES(temp_ch)
 
-    perms.perms.view()
+    perms.perms
+         .flatMap { temp, files ->
+             files.collect { f ->
+                 tuple(temp, f)
+             }
+         }
+         | INTERACTIONS
 }
-
 
