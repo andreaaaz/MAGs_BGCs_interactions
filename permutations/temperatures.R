@@ -50,6 +50,7 @@ cases_list <- list()
 #para imprimir avance
 counter <- 0
 start_time <- Sys.time()
+total_sites <- nrow(mags_by_sites)
 
 for (col1 in colnames(mags_by_sites)) {
   if (col1 == "sites") next
@@ -65,7 +66,7 @@ for (col1 in colnames(mags_by_sites)) {
   for (col2 in colnames(bgcs_by_sites)) { 
     if (col2 == "sites") next
     
-    res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites)
+    res <- binomial_MB(col1, col2, mags_by_sites, bgcs_by_sites, min_sites, total_sites)
     if (is.null(res)) next
     
     cases_list[[length(cases_list) + 1]] <- res
