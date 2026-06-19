@@ -46,7 +46,7 @@ process INTERACTIONS {
 
   script:
   """
-  Rscript ${projectDir}/temperatures.r \
+  Rscript ${projectDir}/temperatures.R \
     --temp ${temp} \
     --indir ${params.indir} \
     --outdir ./ \
