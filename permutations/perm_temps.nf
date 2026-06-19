@@ -31,6 +31,14 @@ process PERMUTE_SITES {
   """
 }
 
+perms.perms
+     .flatMap { temp, files ->
+         files.collect { f ->
+             tuple(temp, f)
+         }
+     }
+     .view()
+
 process INTERACTIONS {
 
   tag "${temp}:${perm_file.baseName}"
@@ -55,13 +63,17 @@ process INTERACTIONS {
 }
 
 workflow {
-    
+
     temp_ch = Channel.fromList(params.temps)
-    
+
     perms = PERMUTE_SITES(temp_ch)
 
     perms.perms
-         .flatten()
+         .flatMap { temp, files ->
+             files.collect { f ->
+                 tuple(temp, f)
+             }
+         }
          | INTERACTIONS
 }
 
