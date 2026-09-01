@@ -312,9 +312,9 @@ qc_sites <- qc_mags %>%
 
 qc_sites %>% 
   ggplot( aes(x=n_mags)) +
-    stat_bin(breaks=seq(0,100,2), fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+    stat_bin(breaks=seq(0,100,1), fill="#69b3a2", color="#e9ecef", alpha=0.9) +
     ggtitle("Number of MAGs in sites") +
-    theme_minimal()
+    theme_minimal() 
 
 qc_sites <- qc_sites %>%
   full_join(meta_sites, by = "sites")
@@ -325,5 +325,17 @@ ggplot(qc_sites, aes(x = temperature_..C., y = n_mags)) +
 ggplot(qc_sites, aes(x = depth, y = n_mags)) +
   geom_point(alpha = 0.7, size = 1) +
   theme_minimal()
+
+
+# add number of mags in the meta sites info
+meta_sites <- meta_sites %>%
+  left_join(
+    qc_sites %>%
+      select(sites, n_mags),
+    by = "sites"
+  )
+write.csv(meta_sites, "~/metadata/meta_sites.csv", row.names = FALSE)
+
+
 
 ```

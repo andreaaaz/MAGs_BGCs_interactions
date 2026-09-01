@@ -18,7 +18,8 @@ option_list <- list(
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
   make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)"),
-  make_option(c("-e", "--method"), type="character", default="binomial", help="Method to calculate significance")
+  make_option(c("-e", "--method"), type="character", default="binomial", help="Method to calculate significance"),
+  make_option(c ("-q", "--quality", type="numeric", default=8, help="sites quality control"))
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -27,6 +28,7 @@ bgc_group <- opt$bgc_groups
 min_sites <- opt$minimum_sites
 temp_r <- opt$temp
 method <- opt$method
+qc_sites <- opt$quality
 
 # Run script
 # Rscript -m mOTUs_Species_Cluster -b gcf -s 5 -t global -i /mnt/atgc-d3/sur/users/azermeno/exp/MAGs_BGCs_interactions/
@@ -42,6 +44,11 @@ meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE
 # functions
 source(paste0(opt$workdir, "functions.R"))
 
+##### SITES QC ######
+
+# filter sites that have less than 8 MAGS
+meta_sites <- meta_sites %>%
+  filter(n_mags >= qc_sites)
 
 ##### TEMPERATURE ######
 temp_range <- NULL
@@ -54,7 +61,7 @@ if (temp_r != "global") {
   meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
     filter(between(temperature_..C., temp_range[1], temp_range[2]))
 }
-# filtrar MAGs y BGCa por sitios
+# filtrar MAGs y BGCs por sitios
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
 meta_bgcs <- meta_bgcs %>%           
