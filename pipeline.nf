@@ -6,6 +6,7 @@ params.outdir = 'exp/2026-interactions/'
 params.method = "binomial"
 params.microbial_lineage = "mOTUs_Species_Cluster"
 params.bgc_groups = "gcf"
+params.quality = "8"
 
 params.temps = ['global','low','mid','high']
 
@@ -29,6 +30,7 @@ process MAG_BGC {
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -t ${temp} \
+        -q ${params.quality} \
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
@@ -45,7 +47,7 @@ process MAG_MAG {
     
     input:
     val temp
-
+  
     output:
     tuple val(temp), path("oc_filt.csv"), emit: oc_filt_mm
     path "*.csv"
@@ -55,6 +57,7 @@ process MAG_MAG {
     Rscript ${projectDir}/interactions_MAG-MAG.r \
         -m ${params.microbial_lineage} \
         -t ${temp} \
+        -q ${params.quality} \
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
