@@ -17,9 +17,9 @@ option_list <- list(
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
-  make_option(c("-t", "--temp"), type="character", default="global", help="Range of temperature (max, mid and min)"),
+  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"),
   make_option(c("-e", "--method"), type="character", default="binomial", help="Method to calculate significance"),
-  make_option(c ("-q", "--quality", type="numeric", default=8, help="sites quality control"))
+  make_option(c("-q", "--quality"), type="numeric", default=8, help="sites quality control")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
