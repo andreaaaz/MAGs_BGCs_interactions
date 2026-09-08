@@ -76,7 +76,7 @@ get_network_stats <- function(g) {
   tibble(n_nodes = vcount(g), 
          n_edges = ecount(g), 
          density = edge_density(g), 
-         diameter = diameter(g, directed = FALSE, weights = NA), # no contar p-values como longitud
+         diameter = diameter(g, directed = FALSE, weights = NA), # no contar p-values como distancia
          mean_degree = mean(degree(g)), 
          median_degree = median(degree(g)), 
          max_degree = max(degree(g)), 
@@ -89,4 +89,14 @@ network_stats <- imap_dfr(networks, ~ get_network_stats(.x) %>%
                             mutate(network = .y)) %>% 
   select(network, everything())
 
+network_stats <- network_stats %>%
+  separate(network, into = c("network_type", "QC"), sep = "_")
+
+
+# GRAPH
+network_stats$QC <- factor(network_stats$QC, levels = c(0, 8, 15))
+ggplot(network_stats, aes(x = QC, y = density, color = network_type, group = network_type)) +
+  geom_point(size = 2) +
+  geom_line() +
+  theme_minimal()
 
