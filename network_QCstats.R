@@ -72,11 +72,11 @@ networks <- list(
 
 # Network Statistics
 get_network_stats <- function(g) {
-  
   comp <- components(g)
   tibble(n_nodes = vcount(g), 
          n_edges = ecount(g), 
          density = edge_density(g), 
+         diameter = diameter(g, directed = FALSE, weights = NA), # no contar p-values como longitud
          mean_degree = mean(degree(g)), 
          median_degree = median(degree(g)), 
          max_degree = max(degree(g)), 
@@ -86,6 +86,7 @@ get_network_stats <- function(g) {
          transitivity = transitivity(g, type = "global"))
 }
 network_stats <- imap_dfr(networks, ~ get_network_stats(.x) %>%
-                            mutate(network = .y))
+                            mutate(network = .y)) %>% 
+  select(network, everything())
 
 
