@@ -8,6 +8,7 @@
 #libraries
 suppressPackageStartupMessages(library(tidyverse))
 library(optparse)
+library(purrr)
 suppressPackageStartupMessages(library(igraph))
 
 # arguments
@@ -54,9 +55,7 @@ g_mmr_8  <- make_network(mmr_8_e, mmr_8_n)
 g_mmr_15 <- make_network(mmr_15_e, mmr_15_n)
 
 # network list
-
 networks <- list(
-  
   "MAG-MAG_0"  = g_mm_0,
   "MAG-MAG_8"  = g_mm_8,
   "MAG-MAG_15" = g_mm_15,
@@ -72,15 +71,21 @@ networks <- list(
 
 
 # Network Statistics
-vcount(g)              # nodos
-ecount(g)              # aristas
-edge_density(g)        # densidad
-mean(degree(g))        # grado promedio
-components(g)$no       # componentes
-diameter(g)            # diámetro
-mean_distance(g)       # distancia promedio
-transitivity(g)        # clustering/transitividad
-
-
+get_network_stats <- function(g) {
+  
+  comp <- components(g)
+  tibble(n_nodes = vcount(g), 
+         n_edges = ecount(g), 
+         density = edge_density(g), 
+         mean_degree = mean(degree(g)), 
+         median_degree = median(degree(g)), 
+         max_degree = max(degree(g)), 
+         n_components = comp$no, 
+         giant_component = max(comp$csize), 
+         giant_component_prop = max(comp$csize) / vcount(g),
+         transitivity = transitivity(g, type = "global"))
+}
+network_stats <- imap_dfr(networks, ~ get_network_stats(.x) %>%
+                            mutate(network = .y))
 
 
