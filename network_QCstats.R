@@ -38,7 +38,7 @@ for (type in types) {
   }
 }
 
-# -----------------------------
+# ------------------------------------------------------
 # Node statistics distribution
 
 # calculate degree, betweeennes, closeness and eigenvector
@@ -54,12 +54,14 @@ get_node_stats <- function(g, network_name) {
 
 node_stats <- purrr::imap_dfr(
   networks,
-  get_node_stats
+  get_node_stats 
 )
-
-
-
+# now we need to change the type and QC to factor to graph
+node_sats <- node_stats %>%
+  mutate(network_type = factor(network_type, levels = c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")),
+         QC = factor(QC, levels = c("0", "08", "15")))
 # graph 
+
 
 
 
@@ -137,6 +139,8 @@ mag_bgc <- ggplot(jaccard_mb_df, aes(x = QC_2, y = QC_1, fill = Jaccard)) +
 grid.arrange(mag_bgc, mag_mag, mag_mag_r, nrow = 1, ncol = 3)
 
 
+
+# ---------------------------------
 # Shared edges between networks
 
 
