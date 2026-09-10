@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(igraph))
 # loading data
 setwd("~/interactions/")
 
-qcs <- c("0", "08", "15")
+qcs <- c("0", "08", "15") 
 types <- c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")
 
 make_network <- function(qc, type) {
@@ -24,7 +24,7 @@ make_network <- function(qc, type) {
   
   folder <- ifelse(type == "MAG-MAG", "mOTUs_Species_Cluster", "mOTUs_Species_Cluster_gcc")
   file_type <- ifelse(type == "MAG-BGC", "mb", "mm")
-  
+  # build the path
   edges <- read.csv(file.path(dir, folder, "global", paste0("edges_", file_type, ".csv")))
   nodes <- read.csv(file.path(dir, folder, "global", paste0("nodes_", file_type, ".csv")))
   graph_from_data_frame(edges, vertices = nodes, directed = FALSE)
@@ -33,17 +33,37 @@ make_network <- function(qc, type) {
 networks <- list()
 
 for (type in types) {
-  for (qc in qcs) {
+  for (qc in qcs) {     # make the graph for every network
     networks[[paste0(type, "_", qc)]] <- make_network(qc, type)
   }
 }
 
-
+# -----------------------------
 # Node statistics distribution
 
+# calculate degree, betweeennes, closeness and eigenvector
+get_node_stats <- function(g, network_name) {
+  tibble(network = network_name,
+         network_type = sub("_.*", "", network_name),
+         node = V(g)$name,
+         degree = degree(g),
+         betweenness = betweenness(g, weights = NA),
+         closeness = closeness(g, weights = NA),
+         eigenvector = eigen_centrality(g, weights = NA)$vector)
+}    # all in the same table 
+
+node_stats <- purrr::imap_dfr(
+  networks,
+  get_node_stats
+)
 
 
 
+# graph 
+
+
+
+# -----------------------------------------------------
 # JACCARD
 # calcular el indice de jaccard de aristas entre dos redes
 jaccard_edges <- function(g1, g2) {
@@ -113,7 +133,7 @@ mag_bgc <- ggplot(jaccard_mb_df, aes(x = QC_2, y = QC_1, fill = Jaccard)) +
   scale_fill_viridis_c(limits = c(0, 1)) +
   coord_equal() +
   theme_minimal() +
-  labs(title = "MAG-BGC reconstructed networks", x = NULL, y = NULL, fill = "Jaccard")
+  labs(title = "MAG-BGC networks", x = NULL, y = NULL, fill = "Jaccard")
 grid.arrange(mag_bgc, mag_mag, mag_mag_r, nrow = 1, ncol = 3)
 
 
