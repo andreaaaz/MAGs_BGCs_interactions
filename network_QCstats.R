@@ -45,10 +45,14 @@ for (type in types) {
 get_node_stats <- function(g, network_name) {
   tibble(network = network_name,
          network_type = sub("_.*", "", network_name),
+         QC = sub(".*_", "", network_name),
          node = V(g)$name,
          degree = degree(g),
+         norm_degree = degree(g, normalized = TRUE),
          betweenness = betweenness(g, weights = NA),
+         norm_betweenness = betweenness(g, weights = NA, normalized = TRUE),
          closeness = closeness(g, weights = NA),
+         norm_closeness = closeness(g, weights = NA, normalized = TRUE),
          eigenvector = eigen_centrality(g, weights = NA)$vector)
 }    # all in the same table 
 
@@ -57,12 +61,17 @@ node_stats <- purrr::imap_dfr(
   get_node_stats 
 )
 # now we need to change the type and QC to factor to graph
-node_sats <- node_stats %>%
-  mutate(network_type = factor(network_type, levels = c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")),
-         QC = factor(QC, levels = c("0", "08", "15")))
+node_stats <- node_stats %>% mutate(network_type = factor(network_type, levels = c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")), 
+                                    QC = factor(QC, levels = c("0", "08", "15")))
 # graph 
+boxplot <- function(node_stats, stat) {
+  ggplot(node_stats, aes(x = QC, y = .data[[stat]], fill = network_type)) +
+    geom_boxplot() +
+    theme_minimal() +
+    labs(x = "QC", y = stat, fill = "Network")
+}
 
-
+boxplot(node_stats, "norm_degree")
 
 
 # -----------------------------------------------------
