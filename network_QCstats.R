@@ -63,15 +63,21 @@ node_stats <- purrr::imap_dfr(
 # now we need to change the type and QC to factor to graph
 node_stats <- node_stats %>% mutate(network_type = factor(network_type, levels = c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")), 
                                     QC = factor(QC, levels = c("0", "08", "15")))
-# graph 
+# BOXPLOT
 boxplot <- function(node_stats, stat) {
   ggplot(node_stats, aes(x = QC, y = .data[[stat]], fill = network_type)) +
     geom_boxplot() +
     theme_minimal() +
     labs(x = "QC", y = stat, fill = "Network")
 }
-
 boxplot(node_stats, "norm_degree")
+
+# QQPLOT
+ggplot(node_stats %>% filter(network_type == "MAG-MAG-rec", QC == "15"), aes(sample = norm_degree)) +
+  stat_qq() +
+  stat_qq_line() +
+  theme_minimal()
+
 
 
 # -----------------------------------------------------
@@ -148,8 +154,86 @@ mag_bgc <- ggplot(jaccard_mb_df, aes(x = QC_2, y = QC_1, fill = Jaccard)) +
 grid.arrange(mag_bgc, mag_mag, mag_mag_r, nrow = 1, ncol = 3)
 
 
-
 # ---------------------------------
 # Shared edges between networks
+
+library(VennDiagram)
+
+# make edges unique identifiers 
+make_edge_id <- function(data, node1, node2) { 
+  apply( data[, c(node1, node2)], 1, function(x) { 
+    paste(sort(x), collapse = "--") } ) 
+}
+
+# MAG-MAG
+potentials_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/all_cases.csv") %>% 
+  filter(oc_sites >= 1)    # de todas las combinaciones posibles, la que co-ocurren al menos una vez
+lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
+highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/oc_filt.csv") # con sitios de alta calidad
+
+potentials_mm$edge <- make_edge_id(potentials_mm, "MAGi", "MAGj" )
+lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
+highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
+# set
+edges_mm <- list(Potential = unique(potentials_mm$edge), 
+                 Low_QC = unique(lowq_mm$edge), 
+                 High_QC = unique(highq_mm$edge))
+myCol <- c("#56B4E9", "#E69F00", "#009E73")
+
+# aristas que comparten
+
+library(VennDiagram)
+
+venn.diagram(
+  x = list(Potential = edges_mm$Potential, Low_QC = edges_mm$Low_QC, High_QC = edges_mm$High_QC),
+  category.names = c("Potential", "Low QC", "High QC"),
+  filename = "MAG-MAG_venn.png",
+  output = TRUE,
+  # Output
+  imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
+  # Circles
+  lwd = 2, lty = "blank", fill = myCol,
+  # Numbers
+  cex = 0.6, fontfamily = "sans",
+  # Set names
+  cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
+  cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
+  cat.fontfamily = "sans", rotation = 1
+)
+
+
+# MAG-BGC
+potentials_mb <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/all_cases.csv") %>%
+  filter(oc_sites >= 1)
+lowq_mb <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
+highq_mb <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/oc_filt.csv") # con sitios de alta calidad
+
+potentials_mb$edge <- make_edge_id(potentials_mb, "Mags", "Bgcs" )
+lowq_mb$edge <- make_edge_id(lowq_mb, "Mags", "Bgcs" )
+highq_mb$edge <- make_edge_id(highq_mb, "Mags", "Bgcs" )
+
+edges_mb <- list(Potential = unique(potentials_mb$edge), 
+                 Low_QC = unique(lowq_mb$edge), 
+                 High_QC = unique(highq_mb$edge))
+
+venn.diagram(
+  x = list(Potential = edges_mb$Potential, Low_QC = edges_mb$Low_QC, High_QC = edges_mb$High_QC),
+  category.names = c("Potential", "Low QC", "High QC"),
+  filename = "MAG-BGC_venn.png",
+  output = TRUE,
+  # Output
+  imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
+  # Circles
+  lwd = 2, lty = "blank", fill = myCol,
+  # Numbers
+  cex = 0.6, fontfamily = "sans",
+  # Set names
+  cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
+  cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
+  cat.fontfamily = "sans", rotation = 1
+)
+
+# MAG-MAG-rec ???
+
 
 
