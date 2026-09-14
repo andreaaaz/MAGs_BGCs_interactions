@@ -170,20 +170,16 @@ potentials_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/all
   filter(oc_sites >= 1)    # de todas las combinaciones posibles, la que co-ocurren al menos una vez
 lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
 highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/oc_filt.csv") # con sitios de alta calidad
-
 potentials_mm$edge <- make_edge_id(potentials_mm, "MAGi", "MAGj" )
 lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
 highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
-# set
+# hacer un set
 edges_mm <- list(Potential = unique(potentials_mm$edge), 
                  Low_QC = unique(lowq_mm$edge), 
                  High_QC = unique(highq_mm$edge))
 myCol <- c("#56B4E9", "#E69F00", "#009E73")
 
 # aristas que comparten
-
-library(VennDiagram)
-
 venn.diagram(
   x = list(Potential = edges_mm$Potential, Low_QC = edges_mm$Low_QC, High_QC = edges_mm$High_QC),
   category.names = c("Potential", "Low QC", "High QC"),
@@ -232,6 +228,21 @@ venn.diagram(
   cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
   cat.fontfamily = "sans", rotation = 1
 )
+
+
+# otra forma 
+ggVennDiagram(
+  edges_mb,
+  label_alpha = 0,
+  set_color = c("#56B4E9", "#E69F00", "#009E73")
+) +
+  scale_fill_gradient(
+    low = "white",
+    high = "white"
+  ) +
+  labs(
+    title = "MAG-BGC interactions"
+  )
 
 # MAG-MAG-rec ???
 
