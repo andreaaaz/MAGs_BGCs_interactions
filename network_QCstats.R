@@ -79,19 +79,51 @@ closeness <- boxplot(node_stats, "closeness")
 eigenvector <- boxplot(node_stats, "eigenvector")
 grid.arrange(degree, norm_degree, norm_betweenness, betweenness, closeness, eigenvector)
 
-
 # QQPLOT
-degree_mm <- ggplot(node_stats %>% filter(network_type == "MAG-MAG", QC == "15"), aes(sample = norm_degree)) +
-  stat_qq() +
-  stat_qq_line() +
+mag_mag <- node_stats %>%
+  filter(network_type == "MAG-MAG", QC %in% c("0", "08", "15"))
+mag_bgc <- node_stats %>%
+  filter(network_type == "MAG-BGC", QC %in% c("0", "08", "15"))
+mag_mag_rec <- node_stats %>%
+  filter(network_type == "MAG-MAG-rec", QC %in% c("0", "08", "15"))
+
+q <- seq(0, 1, length.out = 100)
+
+qq_mm <- tibble(
+  QC_0 = quantile(mag_mag$norm_degree[mag_mag$QC == "0"], probs = q, na.rm = TRUE),
+  QC_08 = quantile(mag_mag$norm_degree[mag_mag$QC == "08"], probs = q, na.rm = TRUE),
+  QC_15 = quantile(mag_mag$norm_degree[mag_mag$QC == "15"], probs = q, na.rm = TRUE)
+)
+qq_mb <- tibble(
+  QC_0 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "0"], probs = q, na.rm = TRUE),
+  QC_08 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "08"], probs = q, na.rm = TRUE),
+  QC_15 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "15"], probs = q, na.rm = TRUE)
+)
+qq_mmr <- tibble(
+  QC_0 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "0"], probs = q, na.rm = TRUE),
+  QC_08 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "08"], probs = q, na.rm = TRUE),
+  QC_15 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "15"], probs = q, na.rm = TRUE)
+)
+
+plot_mm <- ggplot(qq_mm, aes(x = QC_0)) + 
+  geom_point(aes(y = QC_08, color = "QC 08")) +
+  geom_point(aes(y = QC_15, color = "QC 15")) +
+  geom_abline(intercept = 0, slope = 1) +
   theme_minimal() +
-  labs(title = "MAG-MAG node degree")
-degree_mb <- ggplot(node_stats %>% filter(network_type == "MAG-BGC", QC == "15"), aes(sample = norm_degree)) +
-  stat_qq() +
-  stat_qq_line() +
+  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-MAG normalized degree")
+plot_mb <- ggplot(qq_mb, aes(x = QC_0)) + 
+  geom_point(aes(y = QC_08, color = "QC 08")) +
+  geom_point(aes(y = QC_15, color = "QC 15")) +
+  geom_abline(intercept = 0, slope = 1) +
   theme_minimal() +
-  labs(title = "MAG-BGC node degree")
-grid.arrange(degree_mb, degree_mm, ncol = 2, nrow = 1)
+  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-BGC normalized degree")
+plot_mmr <- ggplot(qq_mmr, aes(x = QC_0)) + 
+  geom_point(aes(y = QC_08, color = "QC 08")) +
+  geom_point(aes(y = QC_15, color = "QC 15")) +
+  geom_abline(intercept = 0, slope = 1) +
+  theme_minimal() +
+  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-MAG-rec normalized degree")
+grid.arrange(plot_mm, plot_mb, plot_mmr, ncol = 3, nrow = 1)
 
 
 # -----------------------------------------------------
