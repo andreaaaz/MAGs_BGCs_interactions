@@ -70,14 +70,28 @@ boxplot <- function(node_stats, stat) {
     theme_minimal() +
     labs(x = "QC", y = stat, fill = "Network")
 }
-boxplot(node_stats, "norm_degree")
+require(gridExtra)
+norm_degree <- boxplot(node_stats, "norm_degree")
+degree <- boxplot(node_stats, "degree")
+betweenness <- boxplot(node_stats, "betweenness")
+norm_betweenness <- boxplot(node_stats, "norm_betweenness")
+closeness <- boxplot(node_stats, "closeness")
+eigenvector <- boxplot(node_stats, "eigenvector")
+grid.arrange(degree, norm_degree, norm_betweenness, betweenness, closeness, eigenvector)
+
 
 # QQPLOT
-ggplot(node_stats %>% filter(network_type == "MAG-MAG-rec", QC == "15"), aes(sample = norm_degree)) +
+degree_mm <- ggplot(node_stats %>% filter(network_type == "MAG-MAG", QC == "15"), aes(sample = norm_degree)) +
   stat_qq() +
   stat_qq_line() +
-  theme_minimal()
-
+  theme_minimal() +
+  labs(title = "MAG-MAG node degree")
+degree_mb <- ggplot(node_stats %>% filter(network_type == "MAG-BGC", QC == "15"), aes(sample = norm_degree)) +
+  stat_qq() +
+  stat_qq_line() +
+  theme_minimal() +
+  labs(title = "MAG-BGC node degree")
+grid.arrange(degree_mb, degree_mm, ncol = 2, nrow = 1)
 
 
 # -----------------------------------------------------
