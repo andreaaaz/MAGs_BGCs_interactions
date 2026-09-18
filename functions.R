@@ -325,8 +325,7 @@ recreate_tableMB <- function(mag, bgc, mags_by_sites, bgcs_by_sites) {
   
   # select the site column and the current column for both tables
   table1 <- mags_by_sites[, c("sites", mag), drop = FALSE]
-  table2 <- bgcs_by_sites[, c("
-                              sites", bgc), drop = FALSE]
+  table2 <- bgcs_by_sites[, c("sites", bgc), drop = FALSE]
   
   # bind col1 and col2 by site (full_join porque sino se pierden interacciones)
   table_comb <- full_join(table1, table2, by = "sites")
