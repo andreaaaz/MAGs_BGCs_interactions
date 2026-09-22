@@ -7,7 +7,6 @@
 
 #libraries
 suppressPackageStartupMessages(library(tidyverse))
-library(optparse)
 library(purrr)
 suppressPackageStartupMessages(library(igraph))
 
@@ -202,7 +201,9 @@ grid.arrange(mag_bgc, mag_mag, mag_mag_r, nrow = 1, ncol = 3)
 
 # ---------------------------------
 # Shared edges between networks
-
+library(eulerr)
+library(UpSetR)
+library(ggVennDiagram)
 library(VennDiagram)
 
 # make edges unique identifiers 
@@ -211,42 +212,105 @@ make_edge_id <- function(data, node1, node2) {
     paste(sort(x), collapse = "--") } ) 
 }
 
-# MAG-MAG
-potentials_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/all_cases.csv") %>% 
-  filter(oc_sites >= 1)    # de todas las combinaciones posibles, la que co-ocurren al menos una vez
+
+# MAG-MAG -----------
+potentials_mm <- read.csv("potentials_mm.csv") 
 lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
 highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/oc_filt.csv") # con sitios de alta calidad
+lowq_mmr <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/edges_mm.csv") # mam-mag recontruida
+highq_mmr <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/edges_mm.csv")
+
+
 potentials_mm$edge <- make_edge_id(potentials_mm, "MAGi", "MAGj" )
 lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
 highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
-# hacer un set
-edges_mm <- list(Potential = unique(potentials_mm$edge), 
-                 Low_QC = unique(lowq_mm$edge), 
+lowq_mmr$edge <- make_edge_id(lowq_mmr, "source", "target" )
+highq_mmr$edge <- make_edge_id(highq_mmr, "source", "target" )
+
+# hacer un UpSet
+edges_global <- list(Potentials = unique(potentials_mm$edge),
+                 Rec_Low_QC = unique(lowq_mmr$edge), 
+                 Rec_High_QC = unique(highq_mmr$edge),
+                 Low_QC = unique(lowq_mm$edge),
                  High_QC = unique(highq_mm$edge))
+edges_global2 <- list(Rec_Low_QC = unique(lowq_mmr$edge), 
+                 Rec_High_QC = unique(highq_mmr$edge),
+                 Low_QC = unique(lowq_mm$edge),
+                 High_QC = unique(highq_mm$edge))
+
+upset(fromList(edges_global), 
+      sets = c("Potentials", "Low_QC", "High_QC", "Rec_Low_QC","Rec_High_QC"), 
+      keep.order = FALSE, order.by = "freq", mainbar.y.label = "Number of MAG-MAG edges",
+      sets.x.label = "Number of edges")
+
+
+# euler Diagram global
+eulerr_global <- euler(list(Potentials = unique(potentials_mm$edge),
+                         RecLow_QC = unique(lowq_mmr$edge), 
+                         RecHigh_QC = unique(highq_mmr$edge),
+                         Low_QC = unique(lowq_mm$edge),
+                         High_QC = unique(highq_mm$edge)))
+plot(eulerr_global, fills = TRUE, alpha = 0.8, quantities = TRUE, 
+     labels = TRUE, edges = TRUE, proportional = FALSE, main = "Global MAG-MAG interactions")
+# con zoom (ignora potenciales)
+eulerr_global2 <- euler(list(RecLow_QC = unique(lowq_mmr$edge), 
+                         RecHigh_QC = unique(highq_mmr$edge),
+                         Low_QC = unique(lowq_mm$edge),
+                         High_QC = unique(highq_mm$edge)))
+plot(eulerr_global2, fills = TRUE, alpha = 0.8, quantities = TRUE,  
+     labels = TRUE, edges = TRUE, proportional = TRUE, main = "Global MAG-MAG interactions")
+# MAG-MAG
+edges_mm <- list(Potentials = unique(potentials_mm$edge),
+                  Low_QC = unique(lowq_mm$edge),
+                  High_QC = unique(highq_mm$edge))
 myCol <- c("#56B4E9", "#E69F00", "#009E73")
+venn.diagram(x = edges_mm, category.names = c("Potentials", "Low QC", "High QC"), 
+             filename = "MAG-MAG_venn.png", output = TRUE, # Output
+             imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
+             # Circles
+             lwd = 2, lty = "blank", fill = myCol,
+             # Numbers
+             cex = 0.6, fontfamily = "sans",
+             # Set names
+             cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
+             cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
+             cat.fontfamily = "sans", rotation = 1)
+# Reconstructed MAG-MAG
+edges_mmr <- list(Potentials = unique(potentials_mm$edge),
+                   RecLow_QC = unique(lowq_mmr$edge), 
+                   RecHigh_QC = unique(highq_mmr$edge))
+venn.diagram(x = edges_mmr, category.names = c("Potentials", "Low QC", "High QC"), 
+             filename = "MAG-MAG-rec_venn.png", output = TRUE, # Output
+             imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
+             # Circles
+             lwd = 2, lty = "blank", fill = myCol,
+             # Numbers
+             cex = 0.6, fontfamily = "sans",
+             # Set names
+             cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
+             cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
+             cat.fontfamily = "sans", rotation = 1)
 
-# aristas que comparten
-venn.diagram(
-  x = list(Potential = edges_mm$Potential, Low_QC = edges_mm$Low_QC, High_QC = edges_mm$High_QC),
-  category.names = c("Potential", "Low QC", "High QC"),
-  filename = "MAG-MAG_venn.png",
-  output = TRUE,
-  # Output
-  imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
-  # Circles
-  lwd = 2, lty = "blank", fill = myCol,
-  # Numbers
-  cex = 0.6, fontfamily = "sans",
-  # Set names
-  cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
-  cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
-  cat.fontfamily = "sans", rotation = 1
-)
+# Other venn diagram
+venn <- Venn(edges_global2)
+data <- process_data(venn)
+set_colors <- c("#F7AA14", "#F5D000", "#009E73", "#50C058")
+ggplot() +
+  geom_polygon(
+    aes(X, Y, group = id, fill = id, color = id), data = venn_setedge(data), alpha = 0.55, linewidth = 1) +
+  scale_fill_manual(values = set_colors) +
+  scale_color_manual(values = set_colors) +
+  geom_text(aes(X, Y, label = name), data = venn_setlabel(data)) +
+  # números de conteo por región
+  geom_label(aes(X, Y, label = count), data = venn_regionlabel(data), fill = "white", 
+             alpha = 0, label.size = NA, size = 3.5) +
+  coord_equal() +
+  theme_void() +
+  theme(legend.position = "none") +
+  labs(title = "MAG-MAG interactions")
 
-
-# MAG-BGC
-potentials_mb <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/all_cases.csv") %>%
-  filter(oc_sites >= 1)
+# MAG-BGC ------------
+potentials_mb <- read.csv("potentials_mb.csv") 
 lowq_mb <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
 highq_mb <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/oc_filt.csv") # con sitios de alta calidad
 
@@ -257,40 +321,24 @@ highq_mb$edge <- make_edge_id(highq_mb, "Mags", "Bgcs" )
 edges_mb <- list(Potential = unique(potentials_mb$edge), 
                  Low_QC = unique(lowq_mb$edge), 
                  High_QC = unique(highq_mb$edge))
-
-venn.diagram(
-  x = list(Potential = edges_mb$Potential, Low_QC = edges_mb$Low_QC, High_QC = edges_mb$High_QC),
-  category.names = c("Potential", "Low QC", "High QC"),
-  filename = "MAG-BGC_venn.png",
-  output = TRUE,
-  # Output
-  imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
-  # Circles
-  lwd = 2, lty = "blank", fill = myCol,
-  # Numbers
-  cex = 0.6, fontfamily = "sans",
-  # Set names
-  cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
-  cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
-  cat.fontfamily = "sans", rotation = 1
-)
-
-
-# otra forma 
-ggVennDiagram(
-  edges_mb,
-  label_alpha = 0,
-  set_color = c("#56B4E9", "#E69F00", "#009E73")
-) +
-  scale_fill_gradient(
-    low = "white",
-    high = "white"
-  ) +
-  labs(
-    title = "MAG-BGC interactions"
-  )
-
-# MAG-MAG-rec ???
-
-
+# UpSet
+upset(fromList(edges_mb), 
+      sets = c("Potential", "Low_QC", "High_QC"), 
+      keep.order = FALSE, order.by = "freq", mainbar.y.label = "Number of MAG-BGC edges",
+      sets.x.label = "Number of edges")
+# euler Diagram 
+edges_mb <- list(Potentials = unique(potentials_mb$edge),
+                  Low_QC = unique(lowq_mb$edge), 
+                  High_QC = unique(highq_mb$edge))
+venn.diagram(x = edges_mb, category.names = c("Potentials", "Low QC", "High QC"), 
+             filename = "MAG-BGC_venn.png", output = TRUE, # Output
+             imagetype = "png", height = 480, width = 480, resolution = 300, compression = "lzw",
+             # Circles
+             lwd = 2, lty = "blank", fill = myCol,
+             # Numbers
+             cex = 0.6, fontfamily = "sans",
+             # Set names
+             cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
+             cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
+             cat.fontfamily = "sans", rotation = 1)
 
