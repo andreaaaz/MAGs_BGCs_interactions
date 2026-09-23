@@ -295,7 +295,7 @@ venn.diagram(x = edges_mmr, category.names = c("Potentials", "Low QC", "High QC"
 venn <- Venn(edges_global2)
 data <- process_data(venn)
 set_colors <- c("#F7AA14", "#F5D000", "#009E73", "#50C058")
-ggplot() +
+ggplot() +3
   geom_polygon(
     aes(X, Y, group = id, fill = id, color = id), data = venn_setedge(data), alpha = 0.55, linewidth = 1) +
   scale_fill_manual(values = set_colors) +
