@@ -342,3 +342,22 @@ venn.diagram(x = edges_mb, category.names = c("Potentials", "Low QC", "High QC")
              cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
              cat.fontfamily = "sans", rotation = 1)
 
+# MAG-MAG CONSENSUS
+
+# este subset tiene las aristas que comparten las redes MAG-MAG y MAG-MAG reconstruida 
+# en QC = 0 y QC = 8
+
+highq_mmr <- highq_mmr %>%
+  rename(MAGi = source, MAGj = target)
+lowq_mmr <- lowq_mmr %>%
+  rename(MAGi = source, MAGj = target)
+
+consensus <- Reduce(
+  function(x, y) inner_join(x, y, by = c("MAGi", "MAGj")),
+  list(highq_mm, lowq_mm, highq_mmr, lowq_mmr)
+)
+
+
+
+
+
