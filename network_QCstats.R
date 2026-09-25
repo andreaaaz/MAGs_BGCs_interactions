@@ -347,15 +347,23 @@ venn.diagram(x = edges_mb, category.names = c("Potentials", "Low QC", "High QC")
 # este subset tiene las aristas que comparten las redes MAG-MAG y MAG-MAG reconstruida 
 # en QC = 0 y QC = 8
 
+# filtramos las aristas repetidas porque MAG-MAG-rec es una red dirigrida (tiene MAG1--MAG2 y MAG2--MAG1)
 highq_mmr <- highq_mmr %>%
-  rename(MAGi = source, MAGj = target)
+  distinct(edge, .keep_all = TRUE)
 lowq_mmr <- lowq_mmr %>%
-  rename(MAGi = source, MAGj = target)
+  distinct(edge, .keep_all = TRUE)
 
-consensus <- Reduce(
-  function(x, y) inner_join(x, y, by = c("MAGi", "MAGj")),
-  list(highq_mm, lowq_mm, highq_mmr, lowq_mmr)
-)
+# hacemos el consenso
+consensus <- Reduce(intersect, list(highq_mm$edge, lowq_mm$edge,
+                                    highq_mmr$edge, lowq_mmr$edge))
+# y recuperamos la tablas 
+consensus <- data.frame(edge = consensus)
+consensus <- consensus %>%
+  tidyr::separate(
+    edge,
+    into = c("MAGi", "MAGj"),
+    sep = "--"
+  )
 
 
 
