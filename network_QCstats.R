@@ -365,7 +365,7 @@ consensus <- consensus %>%
     sep = "--"
   )
 
-
+write.csv(consensus, "./consensus.csv", row.names = FALSE)
 
 
 
