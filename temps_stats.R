@@ -60,12 +60,33 @@ get_node_stats <- function(g, network_name, network_type) {
          eigenvector = eigen_centrality(g, weights = NA)$vector)
 }
 
-stats_mb <- purrr::imap_dfr(networks_mb, ~ get_node_stats(.x, .y, "MAG-BGC"))
+stats_mb <- purrr::imap_dfr(networks_mmr, ~ get_node_stats(.x, .y, "MAG-MAG-rec"))
+
+densityplot <- function(node_stats, stat) {
+  ggplot(node_stats, aes(x = .data[[stat]], fill = temperature, color = temperature)) +
+    geom_density(alpha = 0.2) +
+    theme_classic() +
+    labs(x = stat, y = "Density",
+         fill = "Temperature", color = "Temperature")
+}
+require(gridExtra)
+norm_degree <- densityplot(stats_mb, "norm_degree")
+norm_betweenness <- densityplot(stats_mb, "norm_betweenness")
+norm_closeness <- densityplot(stats_mb, "norm_closeness")
+eigenvector <- densityplot(stats_mb, "eigenvector")
+grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 
 
+violinplot <- function(node_stats, stat) {
+  ggplot(node_stats, aes(x = temperature, y = .data[[stat]], fill = temperature)) +
+    geom_violin(alpha = 0.7, trim = FALSE) +
+    theme_classic() +
+    labs(x = "Temperature", y = stat, fill = "Temperature")
+}
+norm_degree <- violinplot(stats_mb, "norm_degree")
+norm_betweenness <- violinplot(stats_mb, "norm_betweenness")
+norm_closeness <- violinplot(stats_mb, "norm_closeness")
+eigenvector <- violinplot(stats_mb, "eigenvector")
+grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 
-
-
-
-
-
+ 
