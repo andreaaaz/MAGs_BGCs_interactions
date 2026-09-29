@@ -356,7 +356,7 @@ lowq_mmr <- lowq_mmr %>%
 # hacemos el consenso
 consensus <- Reduce(intersect, list(highq_mm$edge, lowq_mm$edge,
                                     highq_mmr$edge, lowq_mmr$edge))
-# y recuperamos la tablas 
+# y recuperamos la tabla
 consensus <- data.frame(edge = consensus)
 consensus <- consensus %>%
   tidyr::separate(
@@ -364,8 +364,18 @@ consensus <- consensus %>%
     into = c("MAGi", "MAGj"),
     sep = "--"
   )
+write.csv(consensus, "./consensus_edges_l.csv", row.names = FALSE)
+# y obtenemos los nodos
+nodes_consensus <- data.frame(node = unique(c(consensus$MAGi, consensus$MAGj)))
+write.csv(nodes_consensus, "./consensus_nodes_l.csv", row.names = FALSE)
 
-write.csv(consensus, "./consensus.csv", row.names = FALSE)
 
-
+lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/low/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
+highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/low/oc_filt.csv") # con sitios de alta calidad
+lowq_mmr <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/low/edges_mm.csv") # mam-mag recontruida
+highq_mmr <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/low/edges_mm.csv")
+lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
+highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
+lowq_mmr$edge <- make_edge_id(lowq_mmr, "source", "target" )
+highq_mmr$edge <- make_edge_id(highq_mmr, "source", "target" )
 

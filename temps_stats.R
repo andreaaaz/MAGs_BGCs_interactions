@@ -11,7 +11,7 @@ library(tidyverse)
 library(ggplot2)
 
 # data load 
-setwd("interactions/2026-09-interactions08/")
+setwd("~/interactions/2026-09-interactions08/")
 temperature <- c("global", "high", "mid", "low")
 types <- c("MAG-BGC", "MAG-MAG-rec", "MAG-MAG")
 
@@ -43,8 +43,6 @@ for (temperature in temperature) {
 }
 
 # NODE STATS
-
-
 # calculate degree, betweeennes, closeness and eigenvector
 get_node_stats <- function(g, network_name, network_type) {
   tibble(network = network_name,
@@ -89,4 +87,25 @@ norm_closeness <- violinplot(stats_mb, "norm_closeness")
 eigenvector <- violinplot(stats_mb, "eigenvector")
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 
- 
+
+
+# consensus
+consensus <- list()
+consensus_edges <- c(global = "~/interactions/consensus_edges.csv", 
+                     high = "~/interactions/consensus_edges_h.csv",
+                     mid = "~/interactions/consensus_edges_m.csv",
+                     low = "~/interactions/consensus_edges_l.csv")
+
+consensus_nodes <- c(global = "~/interactions/consensus_nodes.csv",
+                     high = "~/interactions/consensus_nodes_h.csv",
+                     mid = "~/interactions/consensus_nodes_m.csv",
+                     low = "~/interactions/consensus_nodes_l.csv")
+temperature <- c("global", "high", "mid", "low")
+for (temperature in temperature) {
+  edges <- read.csv(consensus_edges[temperature])
+  nodes <- read.csv(consensus_nodes[temperature])
+  consensus[[temperature]] <- graph_from_data_frame(edges, vertices = nodes, directed = FALSE)
+}
+stats_mb <- purrr::imap_dfr(consensus, ~ get_node_stats(.x, .y, "Consensus"))
+
+
