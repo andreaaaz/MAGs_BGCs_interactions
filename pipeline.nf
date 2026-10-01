@@ -8,7 +8,7 @@ params.microbial_lineage = "mOTUs_Species_Cluster"
 params.bgc_groups = "gcf"
 params.quality = "8"
 
-params.temps = ['global','low','mid','high']
+params.temps = ['global', 'low_depth','low','mid','high']
 
 
 process MAG_BGC {
@@ -128,4 +128,5 @@ workflow {
     NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
 }
+
 
