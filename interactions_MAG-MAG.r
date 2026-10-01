@@ -23,7 +23,7 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 mag_lineage <- opt$microbial_lineage
 min_sites <- opt$minimum_sites
-temp_r <- opt$temp
+temp <- opt$temp
 method <- opt$method
 qc_sites <- opt$quality
 
@@ -34,9 +34,8 @@ qc_sites <- opt$quality
 
 #### DATA LOAD ####
 message("\n Preparing input, please wait ...")
-
 meta_mags <- read.csv(file = paste0(opt$indir, 'metadata.csv'), header = TRUE)
-meta_sites <- read.csv(file = paste0(opt$indir, 'meta_sites.csv'), header = TRUE)
+meta_sites <- read.csv(file = paste0(opt$indir, temp, '.csv'), header = TRUE)
 # functions
 source(paste0(opt$workdir, "functions.R"))
 
@@ -46,21 +45,12 @@ source(paste0(opt$workdir, "functions.R"))
 meta_sites <- meta_sites %>%
   filter(n_mags >= qc_sites)
 
-
 ##### TEMPERATURE ######
-temp_range <- NULL
-
-# definir el rango
-if (temp_r == "low") temp_range <- c(-2, 9)
-if (temp_r == "mid") temp_range <- c(10, 20)
-if (temp_r == "high") temp_range <- c(21, 35)
-if (temp_r != "global") {
-  meta_sites <- meta_sites %>%   # filtrar sitios por temperatura
-    filter(between(temperature_..C., temp_range[1], temp_range[2]))
-}
 # filtrar MAGs por sitios
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
+
+
 # Count how many microbial lineages and BGC groups are per site
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 

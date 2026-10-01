@@ -50,8 +50,24 @@ ggplot(meta_sites, aes(x = temperature_..C.)) +
   ) +
   theme_minimal() 
 
-ggplot(meta_sites, aes(x = temperature_..C., y = depth)) +
-  geom_point(alpha = 0.6) +
+ggplot(meta_sites, aes(x = temperature_..C., y = depth, color = temperature_..C.)) +
+  geom_point(alpha = 1) +
+  scale_color_gradientn(
+    colors = c(
+      "#08306B",  # azul profundo
+      "#41B6C4",  # turquesa
+      "#FFFFBF",  # amarillo claro
+      "#FC8D59",  # naranja
+      "#B30000"   # rojo oscuro
+    ),
+    name = "Temperature"
+  ) +
+  geom_vline(
+    xintercept = c(10, 20),
+    color = "red",
+    linetype = "dashed",
+    linewidth = 1
+  ) +
   scale_y_reverse() +
   labs(
     x = "Temperature (°C)",

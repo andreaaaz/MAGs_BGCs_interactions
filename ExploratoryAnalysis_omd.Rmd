@@ -307,7 +307,7 @@ qc_sites <- qc_mags %>%
         n_bgcs, n_gcfs, n_gccs),
       ~ replace_na(.x, 0)
     )
-  )
+  ) 
 
 
 qc_sites %>% 
@@ -331,11 +331,33 @@ ggplot(qc_sites, aes(x = depth, y = n_mags)) +
 meta_sites <- meta_sites %>%
   left_join(
     qc_sites %>%
-      select(sites, n_mags),
+      select(sites, n_bgcs),
     by = "sites"
   )
+
+low_depth <- low_depth %>%
+  filter(n_mags >= 8)
+
+high <- meta_sites %>%
+  filter(between(temperature_..C., 21, 35)) 
+mid <- meta_sites %>%
+  filter(between(temperature_..C., 10, 20)) 
+low <- meta_sites %>%
+  filter(between(temperature_..C., -2, 9)) %>%
+  filter(depth <= 2000) 
+low_depth <- meta_sites %>%
+  filter(between(temperature_..C., -2, 9)) %>%
+  filter(depth > 2000) 
+
+
 write.csv(meta_sites, "~/metadata/meta_sites.csv", row.names = FALSE)
+write.csv(high, "~/metadata/high.csv", row.names = FALSE)
+write.csv(mid, "~/metadata/mid.csv", row.names = FALSE)
+write.csv(low, "~/metadata/low.csv", row.names = FALSE)
+write.csv(low_depth, "~/metadata/low_depth.csv", row.names = FALSE)
 
-
+sum(meta_sites$n_mags)
 
 ```
+
+
