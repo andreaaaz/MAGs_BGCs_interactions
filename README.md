@@ -90,4 +90,6 @@ interactions/
                                      
 ## Acknowledgments
 
-The work in this repository was supported by DGAPA-PAPIIT grant IA200824
+The work in this repository is supported by:
+- *2024 - 2025*: DGAPA-PAPIIT grant IA200824
+- *2026 - present*:  DGAPA-PAPIIT grant IN206626
