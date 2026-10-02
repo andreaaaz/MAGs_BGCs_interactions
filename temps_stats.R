@@ -9,10 +9,20 @@
 library(igraph)
 library(tidyverse)
 library(ggplot2)
+suppressPackageStartupMessages(library(optparse))
+
+# --args
+option_list <- list(
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"))
+
+opt <- parse_args(OptionParser(option_list=option_list))
+temp <- opt$temp
 
 # data load 
-setwd("~/interactions/2026-09-interactions08/")
-temperature <- c("global", "high", "mid", "low")
+temperature <- c("global", "high", "mid", "low", "low_depth")
 types <- c("MAG-BGC", "MAG-MAG-rec", "MAG-MAG")
 
 make_network <- function(temperature, type) {

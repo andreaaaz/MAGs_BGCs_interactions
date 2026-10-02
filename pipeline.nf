@@ -9,7 +9,7 @@ params.bgc_groups = "gcf"
 params.quality = "8"
 
 params.temps = ['global', 'low_depth','low','mid','high']
-
+params.types = ['MAG-BGC', 'MAG-MAG', 'MAG-MAG-rec', 'consensus']
 
 process MAG_BGC {
 
@@ -112,6 +112,49 @@ process NETWORKS_MB {
         -f ${oc_mb} 
     """
 
+}
+
+process TEMPS_STATS {
+
+    tag "$temp"
+
+    publishDir "${params.outdir}/stats/", mode: 'copy'
+
+    input:
+    val temp
+
+    output:
+    path "*.csv"
+
+    script:
+    """
+    Rscript ${projectDir}/temps_stats.r \
+        -t ${temp} \
+        -i ${params.indir} \
+        -o ./ 
+    """
+}
+
+process TYPES_STATS {
+
+    tag "$temp"
+
+    publishDir "${params.outdir}/stats/", mode: 'copy'
+
+    input:
+    val temp
+
+    output:
+    path "*.csv"
+
+    script:
+    """
+    Rscript ${projectDir}/types_stats.r \
+        -t ${temp} \
+        -i ${params.indir} \
+        -o ./ 
+
+    """
 }
 
 
