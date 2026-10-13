@@ -75,6 +75,8 @@ process NETWORKS_MM {
     tuple val(temp), path(oc_file)
 
     output:
+    tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv vayan a consensus 
+                                        // y tambien se tiene que ir a temp_stats y types_stats
     path "*.csv"
 
     script:
@@ -98,6 +100,8 @@ process NETWORKS_MB {
     tuple val(temp), path(oc_mb)
 
     output:
+    tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv (este tambien crea mm) vayan a consensus
+                                        // y tambien se tiene que ir a temp_stats y types_stats    
     path "*.csv"
 
     script:
@@ -112,6 +116,27 @@ process NETWORKS_MB {
         -f ${oc_mb} 
     """
 
+}
+
+process CONSENSUS {
+    tag "$temp" 
+
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/consensus/", mode: 'copy'
+
+    input: 
+    touple val (temp) // aqui debe deben ir los dos edges_mm.csv de MAG-BGC y MAG-MAG
+
+    output: 
+    path "*.csv" // aqui ademas tiene que ir
+
+    script:
+    """
+    Rscript ${projectDir}/consensus.R \ 
+        -t ${temp} \
+        -i ${params.indir} \ 
+        -o ./ \
+        -w ${projectDir}/ 
+    """
 }
 
 process TEMPS_STATS {
