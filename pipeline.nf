@@ -76,7 +76,7 @@ process NETWORKS_MM {
 
     output:
     tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv vayan a consensus 
-                                        // y tambien se tiene que ir a temp_stats y types_stats
+                                        // y tambien se tiene que ir con nodes a temp_stats y types_stats
     path "*.csv"
 
     script:
@@ -101,7 +101,7 @@ process NETWORKS_MB {
 
     output:
     tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv (este tambien crea mm) vayan a consensus
-                                        // y tambien se tiene que ir a temp_stats y types_stats    
+                                        // y tambien se tiene que ir con nodes a temp_stats y types_stats    
     path "*.csv"
 
     script:
@@ -110,6 +110,7 @@ process NETWORKS_MB {
         -m ${params.microbial_lineage} \
         -b ${params.bgc_groups} \
         -t ${temp} \
+        -q ${params.quality} \
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
@@ -127,15 +128,15 @@ process CONSENSUS {
     touple val (temp) // aqui debe deben ir los dos edges_mm.csv de MAG-MAG y MAG-MAG reconstuidos (MAG-BGC)
 
     output: 
-    path "*.csv" // se guarda en microbiallineage_bgcgroups/temp/
+    path "*.csv" // se guarda en microbiallineage_bgcgroups/temp/ y se manda a temp y type stats
 
     script:
     """
     Rscript ${projectDir}/consensus.R \ 
         -t ${temp} \
         -i ${params.indir} \
-        -f ${mm} \  // output from networks MM 
-        -r ${mmr} \ // output from networks MB
+        -f ${mm} \  # output from networks MM 
+        -r ${mmr} \ # output from networks MB
         -o ./ \
         -w ${projectDir}/ 
     """
@@ -148,17 +149,18 @@ process TEMPS_STATS {
     publishDir "${params.outdir}/stats/", mode: 'copy'
 
     input:
-    val temp
+    val temp // necesito los nodes y edges de las mm, las mb y las mmr y las consensus de cada temperatura 
 
     output:
-    path "*.csv"
+    // deben ser figuras
 
     script:
     """
     Rscript ${projectDir}/temps_stats.r \
         -t ${temp} \
         -i ${params.indir} \
-        -o ./ 
+        -o ./   
+// sigue en construccion
     """
 }
 
@@ -169,10 +171,10 @@ process TYPES_STATS {
     publishDir "${params.outdir}/stats/", mode: 'copy'
 
     input:
-    val temp
+    val temp // necesito los nodes y edges de las mm, las mb y las mmr y las consensus de cada temperatura 
 
     output:
-    path "*.csv"
+    // deben ser figuras
 
     script:
     """
@@ -180,7 +182,7 @@ process TYPES_STATS {
         -t ${temp} \
         -i ${params.indir} \
         -o ./ 
-
+    // sigue en contruccion
     """
 }
 
@@ -197,6 +199,9 @@ workflow {
     NETWORKS_MB(mag_bgc_out.oc_filt)
     NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
+    // consensus
+
+    //stats
 }
 
 
