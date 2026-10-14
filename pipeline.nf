@@ -124,16 +124,18 @@ process CONSENSUS {
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/consensus/", mode: 'copy'
 
     input: 
-    touple val (temp) // aqui debe deben ir los dos edges_mm.csv de MAG-BGC y MAG-MAG
+    touple val (temp) // aqui debe deben ir los dos edges_mm.csv de MAG-MAG y MAG-MAG reconstuidos (MAG-BGC)
 
     output: 
-    path "*.csv" // aqui ademas tiene que ir
+    path "*.csv" // se guarda en microbiallineage_bgcgroups/temp/
 
     script:
     """
     Rscript ${projectDir}/consensus.R \ 
         -t ${temp} \
-        -i ${params.indir} \ 
+        -i ${params.indir} \
+        -f ${mm} \  // output from networks MM 
+        -r ${mmr} \ // output from networks MB
         -o ./ \
         -w ${projectDir}/ 
     """

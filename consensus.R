@@ -10,12 +10,20 @@
 suppressPackageStartupMessages(library(tidyverse))
 
 # args
-  
+option_list <- list(
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-f", "--mm"), type="character", help="file with mm network"),
+  make_option(c("-r", "--mmr"), type="character", help="file with mmr network"),
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"))
 
+opt <- parse_args(OptionParser(option_list=option_list))
+temp <- opt$temp  
 
 # data load
-mag_mag <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/") # con sitios de alta calidad
-mag_mag_r <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/edges_mm.csv")
+mag_mag <- read.csv(opt$mm)
+mag_mag_r <- read.csv(opt$mmr)
 source(paste0(opt$workdir, "functions.R"))
 
 # make edges unique identifiers 
