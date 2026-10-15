@@ -18,7 +18,8 @@ option_list <- list(
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
-  make_option(c("-t", "--temp"), type="character", default="low", help="Range of temperature (max, mid and min)")
+  make_option(c("-t", "--temp"), type="character", default="low", help="Range of temperature (max, mid and min)"),
+  make_option(c("-q", "--quality"), type="numeric", default=8, help="sites quality control")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 mag_lineage <- opt$microbial_lineage
@@ -286,6 +287,6 @@ nodes_mm <- nodes_mm %>%
   select(-rep_mag)
 
 ### Save tables ----
-write.csv(nodes_mm, paste0(opt$outdir, "nodes_mm.csv"), row.names = FALSE)
-write.csv(edges_mm, paste0(opt$outdir, "edges_mm.csv"), row.names = FALSE)
+write.csv(nodes_mm, paste0(opt$outdir, "nodes_mmr.csv"), row.names = FALSE)
+write.csv(edges_mm, paste0(opt$outdir, "edges_mmr.csv"), row.names = FALSE)
 
