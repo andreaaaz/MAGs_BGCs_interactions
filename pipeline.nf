@@ -198,8 +198,8 @@ workflow {
     mag_mag_out = MAG_MAG(temp_ch)
     
     // redes
-    NETWORKS_MB(mag_bgc_out.oc_filt)
-    NETWORKS_MM(mag_mag_out.oc_filt_mm)
+    networks_mb_out = NETWORKS_MB(mag_bgc_out.oc_filt)
+    networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
     // consensus
     consensus_inputs = networks_mm_out.edges_mm.join(
