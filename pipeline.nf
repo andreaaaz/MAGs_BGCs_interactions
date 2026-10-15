@@ -8,7 +8,7 @@ params.microbial_lineage = "mOTUs_Species_Cluster"
 params.bgc_groups = "gcf"
 params.quality = "8"
 
-params.temps = ['global', 'low_depth','low','mid','high']
+params.temps = ['global','low','mid','high']
 params.types = ['MAG-BGC', 'MAG-MAG', 'MAG-MAG-rec', 'consensus']
 
 process MAG_BGC {
