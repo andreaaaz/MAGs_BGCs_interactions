@@ -17,7 +17,8 @@ option_list <- list(
   make_option(c("-m", "--mm"), type="character", help="file with mm network"),
   make_option(c("-r", "--mmr"), type="character", help="file with mmr network"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
-  make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"))
+  make_option(c("-t", "--temp"), type="character", default="mid", help="Range of temperature (max, mid and min)"))
+
 
 opt <- parse_args(OptionParser(option_list=option_list))
 temp <- opt$temp  
@@ -29,7 +30,7 @@ source(paste0(opt$workdir, "functions.R"))
 
 # make edges unique identifiers 
 mag_mag$edge <- make_edge_id(mag_mag, "source", "target" )
-mag_mag_r$edge <- make_edge_id(mag_mag, "source", "target")
+mag_mag_r$edge <- make_edge_id(mag_mag_r, "source", "target")
 mag_mag_r <- mag_mag_r %>% # ignoring duplicate edges (MAGi <- MAGj, MAGi -> MAGj)
   distinct(edge, .keep_all = TRUE)
 
