@@ -75,9 +75,8 @@ process NETWORKS_MM {
     tuple val(temp), path(oc_file)
 
     output:
-    tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv vayan a consensus 
-                                        // y tambien se tiene que ir con nodes a temp_stats y types_stats
-    path "*.csv"
+    tuple val(temp), path("edges_mm.csv"), emit: edges_mm
+    path("nodes_mm.csv"), emit: nodes_mm
 
     script:
     """
@@ -100,9 +99,11 @@ process NETWORKS_MB {
     tuple val(temp), path(oc_mb)
 
     output:
-    tuple val(temp), path("edges_mm.csv") // necesito que los edges_mm.csv (este tambien crea mm) vayan a consensus
-                                        // y tambien se tiene que ir con nodes a temp_stats y types_stats    
-    path "*.csv"
+    path("nodes_mb.csv"), emit: nodes_mb
+    path("edges_mb.csv"), emit: edges_mb
+    path("edges_mbm.csv"), emit: edges_mbm
+    tuple val(temp), path("edges_mmr.csv"), emit: edges_mmr
+    path("nodes_mmr.csv"), emit: nodes_mmr
 
     script:
     """
@@ -125,24 +126,25 @@ process CONSENSUS {
     publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/consensus/", mode: 'copy'
 
     input: 
-    touple val (temp) // aqui debe deben ir los dos edges_mm.csv de MAG-MAG y MAG-MAG reconstuidos (MAG-BGC)
+    tuple val(temp), path(mm_file), path(mmr_file)
 
     output: 
-    path "*.csv" // se guarda en microbiallineage_bgcgroups/temp/ y se manda a temp y type stats
+    tuple val(temp), path("edges_cons.csv"), emit: edges_cons
+    path("nodes_cons.csv"), emit: nodes_cons
 
     script:
     """
-    Rscript ${projectDir}/consensus.R \ 
+    Rscript ${projectDir}/consensus.R \
         -t ${temp} \
         -i ${params.indir} \
-        -f ${mm} \  # output from networks MM 
-        -r ${mmr} \ # output from networks MB
+        -m ${mm_file} \
+        -r ${mmr_file} \
         -o ./ \
-        -w ${projectDir}/ 
+        -w ${projectDir}/
     """
 }
 
-process TEMPS_STATS {
+/* process TEMPS_STATS {
 
     tag "$temp"
 
@@ -162,9 +164,9 @@ process TEMPS_STATS {
         -o ./   
 // sigue en construccion
     """
-}
+} */
 
-process TYPES_STATS {
+/* process TYPES_STATS {
 
     tag "$temp"
 
@@ -184,7 +186,7 @@ process TYPES_STATS {
         -o ./ 
     // sigue en contruccion
     """
-}
+} */
 
 
 workflow {
@@ -200,6 +202,10 @@ workflow {
     NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
     // consensus
+    consensus_inputs = networks_mm_out.edges_mm.join(
+        networks_mb_out.edges_mmr
+    )
+    consensus_out = CONSENSUS(consensus_inputs)
 
     //stats
 }

@@ -8,12 +8,13 @@
 
 # libs
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(optparse))
 
 # args
 option_list <- list(
   make_option(c("-i", "--indir"), type="character", help="Input directory"),
   make_option(c("-o", "--outdir"), type="character", help="Output directory"),
-  make_option(c("-f", "--mm"), type="character", help="file with mm network"),
+  make_option(c("-m", "--mm"), type="character", help="file with mm network"),
   make_option(c("-r", "--mmr"), type="character", help="file with mmr network"),
   make_option(c("-w", "--workdir"), type="character", help="Working directory"),
   make_option(c("-t", "--temp"), type="character", default="high", help="Range of temperature (max, mid and min)"))
@@ -44,5 +45,5 @@ consensus <- consensus %>%
   )
 # y obtenemos los nodos
 nodes_consensus <- data.frame(node = unique(c(consensus$MAGi, consensus$MAGj)))
-write.csv(consensus, "mOTUs_Species_Cluster_gcc/global/consensus_edges.csv", row.names = FALSE)
-write.csv(nodes_consensus, "mOTUs_Species_Cluster_gcc/global/consensus_nodes.csv", row.names = FALSE)
+write.csv(consensus, paste0(opt$outdir, "edges_cons.csv"), row.names = FALSE)
+write.csv(nodes_consensus, paste0(opt$outdir, "nodes_cons.csv"), row.names = FALSE)
