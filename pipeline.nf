@@ -123,7 +123,7 @@ process NETWORKS_MB {
 process CONSENSUS {
     tag "$temp" 
 
-    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/consensus/", mode: 'copy'
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/${temp}/", mode: 'copy'
 
     input: 
     tuple val(temp), path(mm_file), path(mmr_file)
@@ -146,9 +146,9 @@ process CONSENSUS {
 
 /* process TEMPS_STATS {
 
-    tag "$temp"
+    tag "$type"
 
-    publishDir "${params.outdir}/stats/", mode: 'copy'
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/temps", mode: 'copy'
 
     input:
     val temp // necesito los nodes y edges de las mm, las mb y las mmr y las consensus de cada temperatura 
