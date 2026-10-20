@@ -77,3 +77,4 @@ png(opt$outdir, width = 2000, height = 1600, res = 200)
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector, ncol = 2)
 dev.off()
 
+write.csv(stats, file = paste0(opt$temp, "_stats.csv"), row.names = FALSE)

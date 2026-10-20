@@ -161,6 +161,7 @@ process TYPES_STATS {
 
     output:
     path("${temp}.png"), emit: plots
+    path("${temp}_stats.csv"), emit: stats
 
     script:
     """
