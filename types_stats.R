@@ -57,7 +57,7 @@ get_node_stats <- function(g, network_name, temperature) {
 
 stats <- purrr::imap_dfr(networks, ~get_node_stats(.x, .y, opt$temp))
 
-density_plot <- function(df, stat){
+densityplot <- function(df, stat){
   ggplot(df, aes(x = .data[[stat]], fill = network, color = network)) +
     geom_density(alpha = 0.2) +
     theme_classic() +
