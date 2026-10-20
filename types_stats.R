@@ -9,6 +9,7 @@
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(gridExtra))
 library(ggplot2)
 
 # file args 
