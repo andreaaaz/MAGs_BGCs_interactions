@@ -57,13 +57,13 @@ get_node_stats <- function(g, network_name, temperature) {
 
 stats <- purrr::imap_dfr(networks, ~get_node_stats(.x, .y, opt$temp))
 
-densityplot <- function(stats, stat) {
-  ggplot(stats, aes(x = .data[[stat]], fill = network_type, color = network_type)) +
+density_plot <- function(df, stat){
+  ggplot(df, aes(x = .data[[stat]], fill = network, color = network)) +
     geom_density(alpha = 0.2) +
     theme_classic() +
-    labs(x = stat, y = "Density",
-         fill = "Network type", color = "Network type")
+    labs(title = opt$temp, x = stat, y = "Density", color = "Network", fill = "Network")
 }
+
 
 norm_degree <- densityplot(stats, "norm_degree") 
 norm_betweenness <- densityplot(stats, "norm_betweenness")
