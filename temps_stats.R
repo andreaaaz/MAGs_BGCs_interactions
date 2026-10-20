@@ -17,22 +17,16 @@ option_list <- list(make_option("--type", type = "character", help = "Network ty
                     make_option("--temps", type = "character", help = "Comma-separated temperatures"),
                     make_option("--edges", type = "character", help = "Space-separated paths to edge files"),
                     make_option("--nodes", type = "character", help = "Space-separated paths to node files"),
-                    make_option("--outfile", type = "character", help = "Output PNG file"),
-                    make_option("--stats_out", type = "character", help = "Output CSV file"))
+                    make_option("--outdir", type = "character", default = ".", help = "Output directory"))
 opt <- parse_args(OptionParser(option_list = option_list))
 
 # parse input list
-
 temps <- strsplit(opt$temps, ",", fixed = TRUE)[[1]]
 edges_files <- strsplit(opt$edges, ",", fixed = TRUE)[[1]]
 nodes_files <- strsplit(opt$nodes, ",", fixed = TRUE)[[1]]
 
 edges_files <- trimws(edges_files)
 nodes_files <- trimws(nodes_files)
-# quitar cuando corra!!!!
-if (length(temps) != length(edges_files) || length(temps) != length(nodes_files)) {
-  stop("The number of temperatures, edge files and node files must match.")
-}
 
 # make networks
 make_network <- function(edges_file, nodes_file) {
@@ -81,60 +75,49 @@ norm_closeness <- densityplot(stats, "norm_closeness")
 eigenvector <- densityplot(stats, "eigenvector")
 
 # saving image and table
-png(opt$outfile,width = 2000,height = 1600, res = 200)
+png(file.path(opt$outdir, paste0(opt$type, ".png")),width = 2000,height = 1600, res = 200)
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 dev.off()
 
-write.csv(stats, file = opt$stats_out, row.names = FALSE)
+write.csv(stats, file.path(opt$outdir, paste0(opt$type, "_stats.csv")), row.names = FALSE)
 
-
+#---------------------------------------------------------------------
 # EDGES STATS
+get_edge_stats <- function(g, network_type, temp) {
+  
+  edge_ends <- ends(g, E(g), names = TRUE) # Identificadores de los extremos de cada arista
+  eb <- edge_betweenness(g, directed = FALSE, weights = NA) # Centralidad de intermediación de cada arista
+  
+  # Conectividad local entre los extremos de cada arista
+  ec <- vapply(seq_len(ecount(g)), function(i) {
+    ends_i <- edge_ends[i, ]
+    edge_connectivity(g, source = ends_i[1], target = ends_i[2])
+  }, numeric(1))
+  
+  tibble(network_type = network_type,
+         temperature = temp,
+         source = edge_ends[, 1],
+         target = edge_ends[, 2],
+         edge_betweenness = as.numeric(eb),
+         edge_connectivity = as.numeric(ec))
+}
 
-#-------------------
-# Edge statistics
-#-------------------
+edge_stats <- purrr::imap_dfr(networks, ~ get_edge_stats(.x, opt$type, .y))
 
-# get_edge_stats <- function(g, network_type, temp) {
-# 
-#   # Edge betweenness
-#   edge_btw <- edge_betweenness(g, weights = NA, directed = FALSE)
-# 
-#   # Shared neighbors for each edge
-#   edge_list <- ends(g, E(g), names = TRUE)
-#   shared_neighbors <- map_dbl(seq_len(ecount(g)), function(i) {
-#     v1 <- edge_list[i, 1]
-#     v2 <- edge_list[i, 2]
-#     n1 <- neighbors(g, v1)$name
-#     n2 <- neighbors(g, v2)$name
-#     length(intersect(n1, n2))
-#   })
-# 
-#   # Jaccard similarity between neighborhoods
-#   jaccard_similarity <- map_dbl(seq_len(ecount(g)), function(i) {
-#     v1 <- edge_list[i, 1]
-#     v2 <- edge_list[i, 2]
-# 
-#     n1 <- neighbors(g, v1)$name
-#     n2 <- neighbors(g, v2)$name
-# 
-#     union_n <- union(n1, n2)
-# 
-#     if (length(union_n) == 0) {
-#       return(0)
-#     }
-# 
-#     length(intersect(n1, n2)) / length(union_n)
-#   })
-# 
-#   tibble(
-#     network_type = network_type,
-#     temperature = temp,
-#     source = edge_list[, 1],
-#     target = edge_list[, 2],
-#     edge_betweenness = edge_btw,
-#     shared_neighbors = shared_neighbors,
-#     jaccard_similarity = jaccard_similarity
-#   )
-# }
+
+edge_betweenness_plot <- ggplot(edge_stats, aes(x = log1p(edge_betweenness), color = temperature, fill = temperature)) +
+  geom_density(alpha = 0.2) +
+  theme_classic() +
+  labs(title = paste(opt$type, "- Edge betweenness"), x = "log(1 + edge betweenness)", y = "Density")
+edge_connectivity_plot <- ggplot(edge_stats,aes(x = edge_connectivity, color = temperature, fill = temperature)) +
+  geom_density(alpha = 0.2) +
+  theme_classic() +
+  labs( title = paste(opt$type, "- Edge connectivity"), x = "Edge connectivity", y = "Density")
+
+png(file.path(opt$outdir, paste0(opt$type, "_edge_stats.png")), width = 2000, height = 800, res = 200)
+grid.arrange( edge_betweenness_plot,edge_connectivity_plot,ncol = 2)
+dev.off()
+
+write.csv(edge_stats, file.path(opt$outdir, paste0(opt$type, "_edge_stats.csv")), row.names = FALSE)
 
 # DISSIMILARITY OF SPECIES

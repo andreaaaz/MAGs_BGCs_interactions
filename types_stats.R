@@ -22,7 +22,7 @@ option_list <- list(make_option(c("-t", "--temp"), type="character"),
                     make_option(c("--nodes_mm"), type="character"),
                     make_option(c("--edges_cons"), type="character"),
                     make_option(c("--nodes_cons"), type="character"),
-                    make_option(c("-o", "--outdir"), type="character"))
+                    make_option(c("--outdir"), type="character"))
 opt <- parse_args(OptionParser(option_list = option_list))
 
 # network load
@@ -67,14 +67,13 @@ densityplot <- function(df, stat){
     labs(title = opt$temp, x = stat, y = "Density", color = "Network", fill = "Network")
 }
 
-
 norm_degree <- densityplot(stats, "norm_degree") 
 norm_betweenness <- densityplot(stats, "log_norm_betweenness")
 norm_closeness <- densityplot(stats, "norm_closeness")
 eigenvector <- densityplot(stats, "eigenvector")
 
-png(opt$outdir, width = 2000, height = 1600, res = 200)
+png(file.path(opt$outdir, paste0(opt$temp, ".png")), width = 2000, height = 1600, res = 200)
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector, ncol = 2)
 dev.off()
 
-write.csv(stats, file = paste0(opt$temp, "_stats.csv"), row.names = FALSE)
+write.csv(stats, file.path(opt$outdir, paste0(opt$temp, "_stats.csv")), row.names = FALSE)

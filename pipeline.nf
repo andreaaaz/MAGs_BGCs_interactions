@@ -175,7 +175,7 @@ process TYPES_STATS {
         --nodes_mm ${nodes_mm} \
         --edges_cons ${edges_cons} \
         --nodes_cons ${nodes_cons} \
-        -o ./${temp}.png
+        --outdir ./
     """
 } 
 
@@ -193,6 +193,8 @@ process TEMPS_STATS {
     output:
     path("${network_type}.png"), emit: plots
     path("${network_type}_stats.csv"), emit: stats
+    path("${network_type}_edge_stats.png"), emit: edge_plots
+    path("${network_type}_edge_stats.csv"), emit: edge_stats
 
     script:
     """
@@ -201,8 +203,7 @@ process TEMPS_STATS {
         --temps "${temps.join(',')}" \
         --edges "${edges.join(',')}" \
         --nodes "${nodes.join(',') }" \
-        --outfile ./${network_type}.png \
-        --stats_out ./${network_type}_stats.csv
+        --outdir ./
     """
 }
 
