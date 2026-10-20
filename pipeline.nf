@@ -164,7 +164,7 @@ process TYPES_STATS {
 
     script:
     """
-    Rscript ${projectDir}/types_stats.r \
+    Rscript ${projectDir}/types_stats.R \
         -t ${temp} \
         --edges_mb ${edges_mb} \
         --nodes_mb ${nodes_mb} \
