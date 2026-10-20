@@ -41,10 +41,9 @@ networks <- list("MAG-BGC" = make_network(opt$edges_mb,   opt$nodes_mb),
                  "consensus" = make_network(opt$edges_cons, opt$nodes_cons))
 
 # NODE STATS# calculate degree, betweeennes, closeness and eigenvector
-get_node_stats <- function(g, network_name, network_type) {
+get_node_stats <- function(g, network_name, temperature) {
   tibble(network = network_name,
-         temperature = network_type,
-         network_type = network_name,
+         temperature = temperature,
          node = V(g)$name,
          degree = degree(g),
          norm_degree = degree(g, normalized = TRUE),
@@ -55,9 +54,9 @@ get_node_stats <- function(g, network_name, network_type) {
          eigenvector = eigen_centrality(g, weights = NA)$vector)
 }
 
-node_stats <- purrr::imap_dfr(networks, ~get_node_stats(.x, .y, opt$temp))
+stats <- purrr::imap_dfr(networks, ~get_node_stats(.x, .y, opt$temp))
 
-densityplot <- function(node_stats, stat) {
+densityplot <- function(stats, stat) {
   ggplot(node_stats, aes(x = .data[[stat]], fill = network_type, color = network_type)) +
     geom_density(alpha = 0.2) +
     theme_classic() +
@@ -65,10 +64,10 @@ densityplot <- function(node_stats, stat) {
          fill = "Network type", color = "Network type")
 }
 
-norm_degree <- densityplot(stats_global, "norm_degree") 
-norm_betweenness <- densityplot(stats_global, "norm_betweenness")
-norm_closeness <- densityplot(stats_global, "norm_closeness")
-eigenvector <- densityplot(stats_global, "eigenvector")
+norm_degree <- densityplot(stats, "norm_degree") 
+norm_betweenness <- densityplot(stats, "norm_betweenness")
+norm_closeness <- densityplot(stats, "norm_closeness")
+eigenvector <- densityplot(stats, "eigenvector")
 
 png(opt$outdir, width = 2000, height = 1600, res = 200)
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector, ncol = 2)
