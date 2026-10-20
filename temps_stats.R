@@ -10,7 +10,6 @@ suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(gridExtra))
-suppressPackageStartupMessages(library(bipartite))
 library(ggplot2)
 
 # file args 
@@ -46,7 +45,7 @@ make_network <- function(edges_file, nodes_file) {
 networks <- purrr::map2(edges_files, nodes_files, make_network)
 names(networks) <- temps
 
-
+#------------------------------------------------------------------------
 # NODE STATS
 # calculate degree, betweeennes, closeness and eigenvector
 get_node_stats <- function(g, network_type, temp) {
@@ -84,5 +83,55 @@ grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 dev.off()
 
 write.csv(stats, file = opt$stats_out, row.names = FALSE)
+
+
+# EDGES STATS
+
+#-------------------
+# Edge statistics
+#-------------------
+
+# get_edge_stats <- function(g, network_type, temp) {
+# 
+#   # Edge betweenness
+#   edge_btw <- edge_betweenness(g, weights = NA, directed = FALSE)
+# 
+#   # Shared neighbors for each edge
+#   edge_list <- ends(g, E(g), names = TRUE)
+#   shared_neighbors <- map_dbl(seq_len(ecount(g)), function(i) {
+#     v1 <- edge_list[i, 1]
+#     v2 <- edge_list[i, 2]
+#     n1 <- neighbors(g, v1)$name
+#     n2 <- neighbors(g, v2)$name
+#     length(intersect(n1, n2))
+#   })
+# 
+#   # Jaccard similarity between neighborhoods
+#   jaccard_similarity <- map_dbl(seq_len(ecount(g)), function(i) {
+#     v1 <- edge_list[i, 1]
+#     v2 <- edge_list[i, 2]
+# 
+#     n1 <- neighbors(g, v1)$name
+#     n2 <- neighbors(g, v2)$name
+# 
+#     union_n <- union(n1, n2)
+# 
+#     if (length(union_n) == 0) {
+#       return(0)
+#     }
+# 
+#     length(intersect(n1, n2)) / length(union_n)
+#   })
+# 
+#   tibble(
+#     network_type = network_type,
+#     temperature = temp,
+#     source = edge_list[, 1],
+#     target = edge_list[, 2],
+#     edge_betweenness = edge_btw,
+#     shared_neighbors = shared_neighbors,
+#     jaccard_similarity = jaccard_similarity
+#   )
+# }
 
 # DISSIMILARITY OF SPECIES
