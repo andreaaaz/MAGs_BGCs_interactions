@@ -24,8 +24,11 @@ opt <- parse_args(OptionParser(option_list = option_list))
 # parse input list
 
 temps <- strsplit(opt$temps, ",", fixed = TRUE)[[1]]
-edges_files <- strsplit(trimws(opt$edges), "\\s+")[[1]]
-nodes_files <- strsplit(trimws(opt$nodes), "\\s+")[[1]]
+edges_files <- strsplit(opt$edges, ",", fixed = TRUE)[[1]]
+nodes_files <- strsplit(opt$nodes, ",", fixed = TRUE)[[1]]
+
+edges_files <- trimws(edges_files)
+nodes_files <- trimws(nodes_files)
 # quitar cuando corra!!!!
 if (length(temps) != length(edges_files) || length(temps) != length(nodes_files)) {
   stop("The number of temperatures, edge files and node files must match.")
