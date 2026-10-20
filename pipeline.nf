@@ -76,7 +76,7 @@ process NETWORKS_MM {
 
     output:
     tuple val(temp), path("edges_mm.csv"), emit: edges_mm
-    path("nodes_mm.csv"), emit: nodes_mm
+    tuple val(temp), path("nodes_mm.csv"), emit: nodes_mm
 
     script:
     """
@@ -99,11 +99,12 @@ process NETWORKS_MB {
     tuple val(temp), path(oc_mb)
 
     output:
-    path("nodes_mb.csv"), emit: nodes_mb
-    path("edges_mb.csv"), emit: edges_mb
-    path("edges_mbm.csv"), emit: edges_mbm
+    tuple val(temp), path("edges_mb.csv"),  emit: edges_mb
+    tuple val(temp), path("nodes_mb.csv"),  emit: nodes_mb
+    tuple val(temp), path("edges_mbm.csv"), emit: edges_mbm
     tuple val(temp), path("edges_mmr.csv"), emit: edges_mmr
-    path("nodes_mmr.csv"), emit: nodes_mmr
+    tuple val(temp), path("nodes_mmr.csv"), emit: nodes_mmr
+
 
     script:
     """
@@ -130,7 +131,7 @@ process CONSENSUS {
 
     output: 
     tuple val(temp), path("edges_cons.csv"), emit: edges_cons
-    path("nodes_cons.csv"), emit: nodes_cons
+    tuple val(temp), path("nodes_cons.csv"), emit: nodes_cons
 
     script:
     """
@@ -144,47 +145,53 @@ process CONSENSUS {
     """
 }
 
-/* process TEMPS_STATS {
 
-    tag "$type"
-
-    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/temps", mode: 'copy'
-
-    input:
-    val temp // necesito los nodes y edges de las mm, las mb y las mmr y las consensus de cada temperatura 
-
-    output:
-    // deben ser figuras
-
-    script:
-    """
-    Rscript ${projectDir}/temps_stats.r \
-        -t ${temp} \
-        -i ${params.indir} \
-        -o ./   
-// sigue en construccion
-    """
-} */
-
-/* process TYPES_STATS {
+process TYPES_STATS {
 
     tag "$temp"
 
-    publishDir "${params.outdir}/stats/", mode: 'copy'
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/type_stats/", mode: 'copy'
 
     input:
-    val temp // necesito los nodes y edges de las mm, las mb y las mmr y las consensus de cada temperatura 
+    tuple val(temp), 
+        path(edges_mb), path(nodes_mb),
+        path(edges_mmr), path(nodes_mmr),
+        path(edges_mm), path(nodes_mm),
+        path(edges_cons), path(nodes_cons)
 
     output:
-    // deben ser figuras
+    path("${temp}.png"), emit: plots
 
     script:
     """
     Rscript ${projectDir}/types_stats.r \
         -t ${temp} \
-        -i ${params.indir} \
-        -o ./ 
-    // sigue en contruccion
+        --edges_mb ${edges_mb} \
+        --nodes_mb ${nodes_mb} \
+        --edges_mmr ${edges_mmr} \
+        --nodes_mmr ${nodes_mmr} \
+        --edges_mm ${edges_mm} \
+        --nodes_mm ${nodes_mm} \
+        --edges_cons ${edges_cons} \
+        --nodes_cons ${nodes_cons} \
+        -o ./${temp}.png
+    """
+} 
+
+/*process TEMPS {
+    tag "$types"
+
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/temp_stats", mode: 'copy'
+
+    input:
+    
+    output:
+    
+    script:
+    """
+    Rscript ${projectDir}/temps_stats.R \
+        --type $\
+
     """
 } */
 
@@ -193,11 +200,11 @@ workflow {
     
     temp_ch = Channel.fromList(params.temps)
     
-    // interacciones 
+    // interactions
     mag_bgc_out = MAG_BGC(temp_ch)
     mag_mag_out = MAG_MAG(temp_ch)
     
-    // redes
+    // networks
     networks_mb_out = NETWORKS_MB(mag_bgc_out.oc_filt)
     networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
@@ -207,7 +214,21 @@ workflow {
     )
     consensus_out = CONSENSUS(consensus_inputs)
 
-    //stats
+    //type stats
+    // group edges and nodes of each network type 
+    mb_files = networks_mb_out.edges_mb.join(networks_mb_out.nodes_mb)
+    mmr_files = networks_mb_out.edges_mmr.join(networks_mb_out.nodes_mmr)
+    mm_files = networks_mm_out.edges_mm.join(networks_mm_out.nodes_mm)
+    cons_files = consensus_out.edges_cons.join(consensus_out.nodes_cons)
+
+    // join them
+    type_stats_inputs = mb_files
+        .join(mmr_files)
+        .join(mm_files)
+        .join(cons_files)
+
+    TYPES_STATS(type_stats_inputs)
+
 }
 
 
