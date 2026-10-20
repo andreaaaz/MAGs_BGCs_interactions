@@ -179,22 +179,32 @@ process TYPES_STATS {
     """
 } 
 
-/*process TEMPS {
-    tag "$types"
+process TEMPS_STATS {
 
-    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/temp_stats", mode: 'copy'
+    tag "$network_type"
+
+    publishDir "${params.outdir}/${params.microbial_lineage}_${params.bgc_groups}/temps_stats/", mode: 'copy'
 
     input:
-    
+    tuple val(network_type),
+        val(temps),
+        path(edges, stageAs: '??/*'), path(nodes, stageAs: '??/*')
+
     output:
-    
+    path("${network_type}.png"), emit: plots
+    path("${network_type}_stats.csv"), emit: stats
+
     script:
     """
     Rscript ${projectDir}/temps_stats.R \
-        --type $\
-
+        --type ${network_type} \
+        --temps "${temps.join(',')}" \
+        --edges "${edges.join(',')}" \
+        --nodes "${nodes.join(',') }" \
+        --outfile ./${network_type}.png \
+        --stats_out ./${network_type}_stats.csv
     """
-} */
+}
 
 
 workflow {
@@ -229,6 +239,42 @@ workflow {
         .join(cons_files)
 
     TYPES_STATS(type_stats_inputs)
+
+    // temp_stats
+    // Pair edges and nodes for each temperature
+
+    mb_temps = networks_mb_out.edges_mb.join(networks_mb_out.nodes_mb)
+        .map { temp, edges, nodes ->
+            tuple('mb', temp, edges, nodes)
+        }
+        .groupTuple(size: params.temps.size())
+
+    mmr_temps = networks_mb_out.edges_mmr
+        .join(networks_mb_out.nodes_mmr)
+        .map { temp, edges, nodes ->
+            tuple('mmr', temp, edges, nodes)
+        }
+        .groupTuple(size: params.temps.size())
+
+    mm_temps = networks_mm_out.edges_mm
+        .join(networks_mm_out.nodes_mm)
+        .map { temp, edges, nodes ->
+            tuple('mm', temp, edges, nodes)
+        }
+        .groupTuple(size: params.temps.size())
+
+    cons_temps = consensus_out.edges_cons
+        .join(consensus_out.nodes_cons)
+        .map { temp, edges, nodes ->
+            tuple('cons', temp, edges, nodes)
+        }
+        .groupTuple(size: params.temps.size())
+
+    // Run one task per network type
+    temps_stats_inputs = mb_temps
+        .mix(mmr_temps, mm_temps, cons_temps)
+
+    TEMPS_STATS(temps_stats_inputs)
 
 }
 
