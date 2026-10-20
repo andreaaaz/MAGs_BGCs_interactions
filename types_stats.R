@@ -69,7 +69,7 @@ densityplot <- function(df, stat){
 
 
 norm_degree <- densityplot(stats, "norm_degree") 
-norm_betweenness <- densityplot(stats, "norm_betweenness")
+norm_betweenness <- densityplot(stats, "log_norm_betweenness")
 norm_closeness <- densityplot(stats, "norm_closeness")
 eigenvector <- densityplot(stats, "eigenvector")
 
