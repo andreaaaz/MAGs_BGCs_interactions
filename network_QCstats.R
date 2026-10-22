@@ -14,15 +14,15 @@ suppressPackageStartupMessages(library(igraph))
 # loading data
 setwd("~/interactions/")
 
-qcs <- c("0", "08", "15") 
-types <- c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")
+qcs <- c("01", "08", "15") 
+types <- c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec") 
 
 make_network <- function(qc, type) {
-  prefix <- ifelse(qc == "0", "", qc)
-  dir <- paste0("2026-09-interactions", prefix)
+
+  dir <- paste0(qc, "_interactions")
   
-  folder <- ifelse(type == "MAG-MAG", "mOTUs_Species_Cluster", "mOTUs_Species_Cluster_gcc")
-  file_type <- ifelse(type == "MAG-BGC", "mb", "mm")
+  folder <- if (type == "MAG-MAG") {"mOTUs_Species_Cluster"} else {"mOTUs_Species_Cluster_gcc"}
+  file_type <- switch(type, "MAG-MAG" = "mm", "MAG-BGC" = "mb", "MAG-MAG-rec" = "mmr")
   # build the path
   edges <- read.csv(file.path(dir, folder, "global", paste0("edges_", file_type, ".csv")))
   nodes <- read.csv(file.path(dir, folder, "global", paste0("nodes_", file_type, ".csv")))
@@ -61,7 +61,7 @@ node_stats <- purrr::imap_dfr(
 )
 # now we need to change the type and QC to factor to graph
 node_stats <- node_stats %>% mutate(network_type = factor(network_type, levels = c("MAG-MAG", "MAG-BGC", "MAG-MAG-rec")), 
-                                    QC = factor(QC, levels = c("0", "08", "15")))
+                                    QC = factor(QC, levels = c("01", "08", "15")))
 # BOXPLOT
 boxplot <- function(node_stats, stat) {
   ggplot(node_stats, aes(x = QC, y = .data[[stat]], fill = network_type)) +
@@ -80,48 +80,48 @@ grid.arrange(degree, norm_degree, norm_betweenness, betweenness, closeness, eige
 
 # QQPLOT
 mag_mag <- node_stats %>%
-  filter(network_type == "MAG-MAG", QC %in% c("0", "08", "15"))
+  filter(network_type == "MAG-MAG", QC %in% c("01", "08", "15"))
 mag_bgc <- node_stats %>%
-  filter(network_type == "MAG-BGC", QC %in% c("0", "08", "15"))
+  filter(network_type == "MAG-BGC", QC %in% c("01", "08", "15"))
 mag_mag_rec <- node_stats %>%
-  filter(network_type == "MAG-MAG-rec", QC %in% c("0", "08", "15"))
+  filter(network_type == "MAG-MAG-rec", QC %in% c("01", "08", "15"))
 
 q <- seq(0, 1, length.out = 100)
 
 qq_mm <- tibble(
-  QC_0 = quantile(mag_mag$norm_degree[mag_mag$QC == "0"], probs = q, na.rm = TRUE),
+  QC_01 = quantile(mag_mag$norm_degree[mag_mag$QC == "01"], probs = q, na.rm = TRUE),
   QC_08 = quantile(mag_mag$norm_degree[mag_mag$QC == "08"], probs = q, na.rm = TRUE),
   QC_15 = quantile(mag_mag$norm_degree[mag_mag$QC == "15"], probs = q, na.rm = TRUE)
 )
 qq_mb <- tibble(
-  QC_0 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "0"], probs = q, na.rm = TRUE),
+  QC_01 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "01"], probs = q, na.rm = TRUE),
   QC_08 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "08"], probs = q, na.rm = TRUE),
   QC_15 = quantile(mag_bgc$norm_degree[mag_bgc$QC == "15"], probs = q, na.rm = TRUE)
 )
 qq_mmr <- tibble(
-  QC_0 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "0"], probs = q, na.rm = TRUE),
+  QC_01 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "01"], probs = q, na.rm = TRUE),
   QC_08 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "08"], probs = q, na.rm = TRUE),
   QC_15 = quantile(mag_mag_rec$norm_degree[mag_mag_rec$QC == "15"], probs = q, na.rm = TRUE)
 )
 
-plot_mm <- ggplot(qq_mm, aes(x = QC_0)) + 
+plot_mm <- ggplot(qq_mm, aes(x = QC_01)) + 
   geom_point(aes(y = QC_08, color = "QC 08")) +
   geom_point(aes(y = QC_15, color = "QC 15")) +
   geom_abline(intercept = 0, slope = 1) +
   theme_minimal() +
-  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-MAG normalized degree")
-plot_mb <- ggplot(qq_mb, aes(x = QC_0)) + 
+  labs(x = "Quantiles QC 01", y = "Quantiles", color = "QC", title = "MAG-MAG normalized degree")
+plot_mb <- ggplot(qq_mb, aes(x = QC_01)) + 
   geom_point(aes(y = QC_08, color = "QC 08")) +
   geom_point(aes(y = QC_15, color = "QC 15")) +
   geom_abline(intercept = 0, slope = 1) +
   theme_minimal() +
-  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-BGC normalized degree")
-plot_mmr <- ggplot(qq_mmr, aes(x = QC_0)) + 
+  labs(x = "Quantiles QC 01", y = "Quantiles", color = "QC", title = "MAG-BGC normalized degree")
+plot_mmr <- ggplot(qq_mmr, aes(x = QC_01)) + 
   geom_point(aes(y = QC_08, color = "QC 08")) +
   geom_point(aes(y = QC_15, color = "QC 15")) +
   geom_abline(intercept = 0, slope = 1) +
   theme_minimal() +
-  labs(x = "Quantiles QC 0", y = "Quantiles", color = "QC", title = "MAG-MAG-rec normalized degree")
+  labs(x = "Quantiles QC 01", y = "Quantiles", color = "QC", title = "MAG-MAG-rec normalized degree")
 grid.arrange(plot_mm, plot_mb, plot_mmr, ncol = 3, nrow = 1)
 
 
@@ -214,16 +214,16 @@ make_edge_id <- function(data, node1, node2) {
 
 
 # MAG-MAG -----------
-potentials_mm <- read.csv("potentials_mm.csv") 
-lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/global/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
-highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/oc_filt.csv") # con sitios de alta calidad
-lowq_mmr <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/global/edges_mm.csv") # mam-mag recontruida
-highq_mmr <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/edges_mm.csv")
+potentials_mm <- read.csv("potentials/potentials_mm.csv") 
+lowq_mm <- read.csv("01_interactions/mOTUs_Species_Cluster/global/edges_mm.csv") # estadisticamente significativas pero con sitios de baja calidad
+highq_mm <- read.csv("08_interactions/mOTUs_Species_Cluster/global/edges_mm.csv") # con sitios de alta calidad
+lowq_mmr <- read.csv("01_interactions/mOTUs_Species_Cluster_gcc/global/edges_mmr.csv") # mam-mag recontruida
+highq_mmr <- read.csv("08_interactions/mOTUs_Species_Cluster_gcc/global/edges_mmr.csv")
 
 
 potentials_mm$edge <- make_edge_id(potentials_mm, "MAGi", "MAGj" )
-lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
-highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
+lowq_mm$edge <- make_edge_id(lowq_mm, "source", "target" )
+highq_mm$edge <- make_edge_id(highq_mm, "source", "target" )
 lowq_mmr$edge <- make_edge_id(lowq_mmr, "source", "target" )
 highq_mmr$edge <- make_edge_id(highq_mmr, "source", "target" )
 
@@ -241,7 +241,8 @@ edges_global2 <- list(Rec_Low_QC = unique(lowq_mmr$edge),
 upset(fromList(edges_global), 
       sets = c("Potentials", "Low_QC", "High_QC", "Rec_Low_QC","Rec_High_QC"), 
       keep.order = FALSE, order.by = "freq", mainbar.y.label = "Number of MAG-MAG edges",
-      sets.x.label = "Number of edges")
+      sets.x.label = "Number of edges",
+      )
 
 
 # euler Diagram global
@@ -295,7 +296,7 @@ venn.diagram(x = edges_mmr, category.names = c("Potentials", "Low QC", "High QC"
 venn <- Venn(edges_global2)
 data <- process_data(venn)
 set_colors <- c("#F7AA14", "#F5D000", "#009E73", "#50C058")
-ggplot() +3
+ggplot() +
   geom_polygon(
     aes(X, Y, group = id, fill = id, color = id), data = venn_setedge(data), alpha = 0.55, linewidth = 1) +
   scale_fill_manual(values = set_colors) +
@@ -341,41 +342,4 @@ venn.diagram(x = edges_mb, category.names = c("Potentials", "Low QC", "High QC")
              cat.cex = 0.6, cat.fontface = "bold", cat.default.pos = "outer",
              cat.pos = c(-27, 27, 135), cat.dist = c(0.055, 0.055, 0.085),
              cat.fontfamily = "sans", rotation = 1)
-
-# MAG-MAG CONSENSUS
-
-# este subset tiene las aristas que comparten las redes MAG-MAG y MAG-MAG reconstruida 
-# en QC = 0 y QC = 8
-
-# filtramos las aristas repetidas porque MAG-MAG-rec es una red dirigrida (tiene MAG1--MAG2 y MAG2--MAG1)
-highq_mmr <- highq_mmr %>%
-  distinct(edge, .keep_all = TRUE)
-lowq_mmr <- lowq_mmr %>%
-  distinct(edge, .keep_all = TRUE)
-
-# hacemos el consenso
-consensus <- Reduce(intersect, list(highq_mm$edge, lowq_mm$edge,
-                                    highq_mmr$edge, lowq_mmr$edge))
-# y recuperamos la tabla
-consensus <- data.frame(edge = consensus)
-consensus <- consensus %>%
-  tidyr::separate(
-    edge,
-    into = c("MAGi", "MAGj"),
-    sep = "--"
-  )
-write.csv(consensus, "./consensus_edges_l.csv", row.names = FALSE)
-# y obtenemos los nodos
-nodes_consensus <- data.frame(node = unique(c(consensus$MAGi, consensus$MAGj)))
-write.csv(nodes_consensus, "./consensus_nodes_l.csv", row.names = FALSE)
-
-
-lowq_mm <- read.csv("2026-09-interactions/mOTUs_Species_Cluster/low/oc_filt.csv") # estadisticamente significativas pero con sitios de baja calidad
-highq_mm <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/low/oc_filt.csv") # con sitios de alta calidad
-lowq_mmr <- read.csv("2026-09-interactions/mOTUs_Species_Cluster_gcc/low/edges_mm.csv") # mam-mag recontruida
-highq_mmr <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/low/edges_mm.csv")
-lowq_mm$edge <- make_edge_id(lowq_mm, "MAGi", "MAGj" )
-highq_mm$edge <- make_edge_id(highq_mm, "MAGi", "MAGj" )
-lowq_mmr$edge <- make_edge_id(lowq_mmr, "source", "target" )
-highq_mmr$edge <- make_edge_id(highq_mmr, "source", "target" )
 

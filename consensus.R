@@ -7,26 +7,30 @@
 # MAG-MAG reconstructed networks, the global shared edges are 11,727 (go to network_QCstats.R)
 
 # libs
-
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(optparse))
 
 # args
+option_list <- list(
+  make_option(c("-i", "--indir"), type="character", help="Input directory"),
+  make_option(c("-o", "--outdir"), type="character", help="Output directory"),
+  make_option(c("-m", "--mm"), type="character", help="file with mm network"),
+  make_option(c("-r", "--mmr"), type="character", help="file with mmr network"),
+  make_option(c("-w", "--workdir"), type="character", help="Working directory"),
+  make_option(c("-t", "--temp"), type="character", default="mid", help="Range of temperature (max, mid and min)"))
 
-# 
 
-
+opt <- parse_args(OptionParser(option_list=option_list))
+temp <- opt$temp  
 
 # data load
-mag_mag <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster/global/oc_filt.csv") # con sitios de alta calidad
-mag_mag_r <- read.csv("2026-09-interactions08/mOTUs_Species_Cluster_gcc/global/edges_mm.csv")
+mag_mag <- read.csv(opt$mm)
+mag_mag_r <- read.csv(opt$mmr)
+source(paste0(opt$workdir, "functions.R"))
 
 # make edges unique identifiers 
-make_edge_id <- function(data, node1, node2) { 
-  apply( data[, c(node1, node2)], 1, function(x) { 
-    paste(sort(x), collapse = "--") } ) 
-}
-
-mag_mag$edge <- make_edge_id(mag_mag, "MAGi", "MAGj" )
-mag_mag$edge <- make_edge_id(mag_mag, "source", "target")
+mag_mag$edge <- make_edge_id(mag_mag, "source", "target" )
+mag_mag_r$edge <- make_edge_id(mag_mag_r, "source", "target")
 mag_mag_r <- mag_mag_r %>% # ignoring duplicate edges (MAGi <- MAGj, MAGi -> MAGj)
   distinct(edge, .keep_all = TRUE)
 
@@ -42,5 +46,5 @@ consensus <- consensus %>%
   )
 # y obtenemos los nodos
 nodes_consensus <- data.frame(node = unique(c(consensus$MAGi, consensus$MAGj)))
-write.csv(consensus, "mOTUs_Species_Cluster_gcc/global/consensus_edges.csv", row.names = FALSE)
-write.csv(nodes_consensus, "mOTUs_Species_Cluster_gcc/global/consensus_nodes.csv", row.names = FALSE)
+write.csv(consensus, paste0(opt$outdir, "edges_cons.csv"), row.names = FALSE)
+write.csv(nodes_consensus, paste0(opt$outdir, "nodes_cons.csv"), row.names = FALSE)

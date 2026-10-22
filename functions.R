@@ -355,3 +355,16 @@ recreate_tableMM <- function(magi, magj, mags_by_sites) {
   return(comb)
 }
 
+# NETWORKS
+
+# make edges unique identifiers 
+make_edge_id <- function(data, node1, node2) { 
+  apply( data[, c(node1, node2)], 1, function(x) { 
+    paste(sort(x), collapse = "--") } ) 
+}
+
+
+
+
+
+
