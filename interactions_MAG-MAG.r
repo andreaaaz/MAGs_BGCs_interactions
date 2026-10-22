@@ -59,7 +59,7 @@ mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 
 # tabla donde se va a guardar informacion de los patrones
 cases_list <- list()
-total_sites <- nrow(mags_by_sites)
+total_sites <- length(mags_by_sites)
 # para imprimir avance
 start_time <- Sys.time()
 # para recorrer las columnas de mags_by_sites
