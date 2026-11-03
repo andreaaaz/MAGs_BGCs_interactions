@@ -14,6 +14,11 @@ meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
 meta_sites <- read.csv("~/metadata/meta_sites.csv")
 source("~/MAGs_BGCs_interactions/functions.R")
 
+meta_sites <- meta_sites %>%
+  filter(n_mags >= 8)
+meta_mags <- meta_mags %>%           
+  semi_join(meta_sites, by = "sites")
+
 # SEQUENCING QUALITY CONTROL ------------------
 # MAGs
 qc_mags <- meta_mags %>%
@@ -68,19 +73,9 @@ ggplot(qc_sites, aes(x = depth, y = n_mags)) +
 ggplot(meta_sites, aes(x = temperature_..C.)) + 
   geom_histogram(aes(fill = after_stat(x)), bins = 70) + 
   scale_fill_gradientn(
-    colors = c(
-      "#08306B",  # azul profundo
-      "#41B6C4",  # turquesa
-      "#FFFFBF",  # amarillo claro
-      "#FC8D59",  # naranja
-      "#B30000"   # rojo oscuro
-    ),
-    name = "Temperature"
-  ) + 
-  labs(
-    x = "Temperature (°C)",
-    y = "Frequency"
-  ) +
+    colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
+    name = "Temperature") + 
+  labs(x = "Temperature (°C)", y = "Frequency") +
   theme_minimal() 
 
 ggplot(meta_sites, aes(x = temperature_..C., y = depth, color = temperature_..C.)) +
@@ -89,17 +84,14 @@ ggplot(meta_sites, aes(x = temperature_..C., y = depth, color = temperature_..C.
     colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
     name = "Temperature") +
   scale_y_reverse() +
-  labs(
-    x = "Temperature (°C)",
-    y = "Depth (m)"
-  ) +
+  labs(x = "Temperature (°C)", y = "Depth (m)") +
   theme_minimal()
 
 
 # PRINCIPAL COORDINATE ANALYSIS ---------------
 # meta_sites <- meta_sites %>%
 #   filter(n_mags >= qc_sites)
-mags_by_sites <- prep_mags(meta_mags, "mOTUs_Species_Cluster")
+mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 # convertirla en presencia/ausencia
 mags_by_sites <- mags_by_sites %>%
   mutate(across(-sites, ~ as.integer(.x > 0)))
@@ -115,7 +107,8 @@ jaccard_dist <- vegdist(sites_matrix, method = "jaccard", binary = TRUE)
 pcoa <- cmdscale(jaccard_dist, k = 2, eig = TRUE)
 pcoa_scores <- as.data.frame(pcoa$points) %>%
   setNames(c("PCoA1", "PCoA2")) %>%
-  rownames_to_column("sites")
+  rownames_to_column("sites") %>%
+  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer, depth) %>% distinct(), by = "sites")
 
 # PCs
 eig <- pcoa$eig
@@ -123,24 +116,19 @@ eig <- pcoa$eig
 positive_eig <- eig[eig > 0]
 variance_explained <- 100 * positive_eig / sum(positive_eig)
 # Percentage explained by the first two axes
-eig_df <- data.frame(axis = seq_along(variance_explained), variance = variance_explained)
-ggplot(eig_df %>% filter(axis <= 10), aes(x = axis, y = variance)) +
+eig_df <- data.frame(axis = seq_along(variance_explained), variance = variance_explained, cumulative = cumsum(variance_explained))
+ggplot(eig_df %>% filter(axis <= 50), aes(x = axis, y = variance)) +
   geom_col() +
   geom_line() +
   geom_point() +
-  scale_x_continuous( breaks = 1:10, labels = 1:10, limits = c(0.5, 10.5)) +
+  scale_x_continuous( breaks = 1:50, labels = 1:50, limits = c(0.5, 50.5)) +
   labs(x = "PCoA axis",  y = "Percentage of positive eigenvalues (%)") +
   theme_classic()
 
 
-# añadir temperaturas
-pcoa_scores <- as.data.frame(pcoa$points) %>%
-  setNames(c("PCoA1", "PCoA2")) %>%
-  rownames_to_column("sites") %>%
-  left_join(meta_sites %>% select(sites, temperature_..C.) %>% distinct(), by = "sites")
 # plot PCoA
-ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temperature_..C.)) +
-  geom_point(size = 1, alpha = 1) +
+ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temperature_..C., shape = depth_layer)) +
+  geom_point(size = 2, alpha = 0.85) +
   scale_color_gradientn(
     colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
     name = "Temperature") +
@@ -150,4 +138,49 @@ ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temperature_..C.)) +
   theme_classic()
 
 
+# herarcical clustering
+hc_jaccard <- hclust(jaccard_dist, method = "average")
+clusters_jaccard <- cutree(hc_jaccard, k = 3)
+sil <- silhouette(clusters_jaccard, jaccard_dist)
+mean(sil[, "sil_width"])
+aggregate(sil[, "sil_width"], by = list(cluster = sil[, "cluster"]), FUN = mean)
 
+pcoa_df <- as.data.frame(pcoa$points)
+colnames(pcoa_df) <- c("PCoA1", "PCoA2")
+pcoa_df$site <- rownames(pcoa_df)
+pcoa_df$cluster_h <- factor(clusters_jaccard[pcoa_df$site])
+
+pcoa_df <- pcoa_df %>%
+  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer), by = c("site" = "sites"))
+
+ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_h)) +
+  geom_point(size = 1, alpha = 0.8) +
+  theme_classic() +
+  labs(title = "PCoA - Jaccard", color = "Cluster", x = "PCoA 1", y = "PCoA 2")
+
+
+# PAM
+pam_result <- pam(jaccard_dist, k = 3, diss = TRUE)
+clusters_pam <- pam_result$clustering
+pam_result$silinfo$avg.width
+pcoa_df$cluster_pam <- factor(clusters_pam[match(pcoa_df$site, names(clusters_pam))])
+
+ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_pam)) +
+  geom_point(size = 1, alpha = 0.8) +
+  theme_classic() +
+  labs(title = "PCoA - PAM clustering",
+       color = "Cluster")
+table(clusters_pam)
+
+
+pcoa_df$cluster_pam <- recode(
+  as.character(pcoa_df$cluster_pam),
+  "1" = "3",
+  "2" = "1",
+  "3" = "2"
+)
+
+pcoa_df$cluster_pam <- factor(
+  pcoa_df$cluster_pam,
+  levels = c("1", "2", "3")
+)
