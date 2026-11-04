@@ -273,6 +273,69 @@ ggplot(meta_mags, aes(x = CheckM_Completeness,
   ) +
   theme_minimal()
 
+
+# MAGs
+qc_mags <- meta_mags %>%
+  group_by(sites) %>%
+  summarise(
+    n_scaffolds = sum(X._scaffolds, na.rm = TRUE),
+    n_families = n_distinct(family, na.rm = TRUE),
+    n_genus = n_distinct(genus, na.rm = TRUE),
+    n_motus = n_distinct(mOTUs_Species_Cluster, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# BGCs
+qc_bgcs <- meta_bgcs %>%
+  group_by(sites) %>%
+  summarise(
+    n_bgcs = n_distinct(BGC),
+    n_gcfs = n_distinct(gcf, na.rm = TRUE),
+    n_gccs = n_distinct(gcc, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Combine
+qc_sites <- qc_mags %>%
+  full_join(qc_bgcs, by = "sites") %>%
+  mutate(
+    across(
+      c(n_scaffolds, n_families, n_genus, n_motus,
+        n_bgcs, n_gcfs, n_gccs),
+      ~ replace_na(.x, 0)
+    )
+  )
+
+qc_sites <- qc_sites %>%
+  full_join(meta_sites, by = "sites")
+
+qc_sites <- qc_sites %>%
+  filter(n_mags >= 8) %>%
+  filter(depth < 2000)
+
+qc_sites <- qc_sites %>%
+  filter(!is.na(temperature_..C.)) %>%
+  arrange(desc(temperature_..C.)) %>%
+  mutate(temp_group = case_when(
+    row_number() <= 150 ~ "high",
+    row_number() <= 300 ~ "medium",
+     TRUE ~ "low"))
+
+write.csv(qc_sites, "~/metadata/q08/global.csv", row.names = FALSE)
+
+low <- qc_sites %>%
+  filter(temp_group == "low")
+write.csv(low, "~/metadata/q08/low.csv", row.names = FALSE)
+
+mid <- qc_sites %>%
+  filter(temp_group == "medium")
+write.csv(mid, "~/metadata/q08/mid.csv", row.names = FALSE)
+
+high <- qc_sites %>%
+  filter(temp_group == "high")
+write.csv(high, "~/metadata/q08/high.csv", row.names = FALSE)
+
+sum(high$n_bgcs)
 ```
 
 
