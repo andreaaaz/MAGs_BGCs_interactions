@@ -15,9 +15,17 @@ meta_sites <- read.csv("~/metadata/meta_sites.csv")
 source("~/MAGs_BGCs_interactions/functions.R")
 
 meta_sites <- meta_sites %>%
-  filter(n_mags >= 8)
+  filter(n_mags >= 8) %>%
+  filter(depth < 2000)
 meta_mags <- meta_mags %>%           
   semi_join(meta_sites, by = "sites")
+meta_sites <- meta_sites %>%
+  filter(!is.na(temperature_..C.)) %>%
+  arrange(desc(temperature_..C.)) %>%
+  mutate(temp_group = case_when(
+    row_number() <= 150 ~ "high",
+    row_number() <= 300 ~ "medium",
+    TRUE ~ "low"))
 
 # SEQUENCING QUALITY CONTROL ------------------
 # MAGs
@@ -45,13 +53,8 @@ qc_bgcs <- meta_bgcs %>%
 # Combine
 qc_sites <- qc_mags %>%
   full_join(qc_bgcs, by = "sites") %>%
-  mutate(
-    across(
-      c(n_mags, n_scaffolds, n_families, n_genus, n_motus,
-        n_bgcs, n_gcfs, n_gccs),
-      ~ replace_na(.x, 0)
-    )
-  ) 
+  mutate(across(c(n_mags, n_scaffolds, n_families, n_genus, n_motus, n_bgcs, n_gcfs, n_gccs), ~ replace_na(.x, 0))) 
+
 qc_sites %>% 
   ggplot( aes(x=n_mags)) +
   stat_bin(breaks=seq(0,100,1), fill="#69b3a2", color="#e9ecef", alpha=0.9) +
@@ -73,50 +76,51 @@ ggplot(qc_sites, aes(x = depth, y = n_mags)) +
 ggplot(meta_sites, aes(x = temperature_..C.)) + 
   geom_histogram(aes(fill = after_stat(x)), bins = 70) + 
   scale_fill_gradientn(
-    colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
+    colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"), 
     name = "Temperature") + 
   labs(x = "Temperature (°C)", y = "Frequency") +
   theme_minimal() 
 
-ggplot(meta_sites, aes(x = temperature_..C., y = depth, color = temperature_..C.)) +
+ggplot(meta_sites, aes(x = temperature_..C., y = depth, color = temp_group)) +
   geom_point(alpha = 1) +
-  scale_color_gradientn(
-    colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
-    name = "Temperature") +
+  scale_color_manual(values = c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4"), name = "Temperature") +
   scale_y_reverse() +
   labs(x = "Temperature (°C)", y = "Depth (m)") +
   theme_minimal()
 
-
 # PRINCIPAL COORDINATE ANALYSIS ---------------
-# meta_sites <- meta_sites %>%
-#   filter(n_mags >= qc_sites)
+
+# Data prep --------------------------------------------------------------------
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
-# convertirla en presencia/ausencia
-mags_by_sites <- mags_by_sites %>%
+mags_by_sites <- mags_by_sites %>% # convertirla en presencia/ausencia
   mutate(across(-sites, ~ as.integer(.x > 0)))
-# hacerla matrix
-sites_matrix <- mags_by_sites %>%
+
+sites_matrix <- mags_by_sites %>% # hacerla matriz
   column_to_rownames("sites") %>%
   as.matrix()
-# quitar sitios sin mOTUs
-sites_matrix <- sites_matrix[rowSums(sites_matrix) > 0, , drop = FALSE]
+sites_matrix <- sites_matrix[rowSums(sites_matrix) > 0, , drop = FALSE] # quitar sitios sin mOTUs
 
-# calcular jaccard distance 
+
+# Jaccard distances ------------------------------------------------------------
 jaccard_dist <- vegdist(sites_matrix, method = "jaccard", binary = TRUE)
 pcoa <- cmdscale(jaccard_dist, k = 2, eig = TRUE)
 pcoa_scores <- as.data.frame(pcoa$points) %>%
   setNames(c("PCoA1", "PCoA2")) %>%
   rownames_to_column("sites") %>%
-  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer, depth) %>% distinct(), by = "sites")
+  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer, depth, temp_group) %>% distinct(), by = "sites")
 
-# PCs
+# PCos  eigenvalues explained --------------------------------------------------
+
+# calcular varianza explicada para cada PC 
 eig <- pcoa$eig
-# proportion of positive eigenvalues explained
 positive_eig <- eig[eig > 0]
 variance_explained <- 100 * positive_eig / sum(positive_eig)
-# Percentage explained by the first two axes
 eig_df <- data.frame(axis = seq_along(variance_explained), variance = variance_explained, cumulative = cumsum(variance_explained))
+
+positive_axes <- which(eig[seq_len(ncol(pcoa$points))] > 0)
+
+
+# plot varianza explicada
 ggplot(eig_df %>% filter(axis <= 50), aes(x = axis, y = variance)) +
   geom_col() +
   geom_line() +
@@ -124,63 +128,124 @@ ggplot(eig_df %>% filter(axis <= 50), aes(x = axis, y = variance)) +
   scale_x_continuous( breaks = 1:50, labels = 1:50, limits = c(0.5, 50.5)) +
   labs(x = "PCoA axis",  y = "Percentage of positive eigenvalues (%)") +
   theme_classic()
-
-
-# plot PCoA
-ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temperature_..C., shape = depth_layer)) +
+# plot las 2 primeras PCos 
+ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
   geom_point(size = 2, alpha = 0.85) +
-  scale_color_gradientn(
-    colors = c("#08306B", "#41B6C4", "#FFFFBF", "#FC8D59", "#B30000"),
-    name = "Temperature") +
+  scale_color_manual(values = c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4"), name = "Temperature") +
   labs(x = paste0("PCoA1 (", round(variance_explained[1], 2), "%)"),
        y = paste0("PCoA2 (", round(variance_explained[2], 2), "%)"),
        title = "Microbial community composition across sites") +
   theme_classic()
 
 
-# herarcical clustering
+# PCoA -------------------------------------------------------------------------
+
+# agregar mas coordenadas (para el kmeans)
+n_coords <- 20
+k_pcoa <- min(50, nrow(sites_matrix) - 1)
+pcoa <- cmdscale(jaccard_dist,k = k_pcoa, eig = TRUE)
+
+# sacar todas las coordenadas calculadas
+pcoa_all <- as.data.frame(pcoa$points)
+colnames(pcoa_all) <- paste0("PCoA", seq_len(ncol(pcoa_all)))
+pcoa_all <- pcoa_all %>%
+  rownames_to_column("site")
+
+# coordinates for K-means
+pcoa_coords <- pcoa_all %>%
+  select(all_of(paste0("PCoA", positive_axes[1:n_coords])))
+
+# Add metadata
+pcoa_df <- pcoa_all %>%
+  left_join(
+    meta_sites %>%
+      select(sites, temperature_..C., depth_layer, depth, temp_group) %>%
+      distinct(), by = c("site" = "sites"))
+
+
+# CLUSTERING -------------------------------------------------------------------
+# comparing different methods
+
+# HIERARQUICAL CLUSTER -----
 hc_jaccard <- hclust(jaccard_dist, method = "average")
 clusters_jaccard <- cutree(hc_jaccard, k = 3)
-sil <- silhouette(clusters_jaccard, jaccard_dist)
-mean(sil[, "sil_width"])
-aggregate(sil[, "sil_width"], by = list(cluster = sil[, "cluster"]), FUN = mean)
 
-pcoa_df <- as.data.frame(pcoa$points)
-colnames(pcoa_df) <- c("PCoA1", "PCoA2")
-pcoa_df$site <- rownames(pcoa_df)
-pcoa_df$cluster_h <- factor(clusters_jaccard[pcoa_df$site])
-
-pcoa_df <- pcoa_df %>%
-  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer), by = c("site" = "sites"))
-
-ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_h)) +
-  geom_point(size = 1, alpha = 0.8) +
-  theme_classic() +
-  labs(title = "PCoA - Jaccard", color = "Cluster", x = "PCoA 1", y = "PCoA 2")
+sil_h <- silhouette(clusters_jaccard,jaccard_dist) # silhouette
+pcoa_df$cluster_h <- factor(clusters_jaccard[pcoa_df$site]) # assign clusters 
 
 
-# PAM
+# PAM ---------------------
 pam_result <- pam(jaccard_dist, k = 3, diss = TRUE)
 clusters_pam <- pam_result$clustering
-pam_result$silinfo$avg.width
-pcoa_df$cluster_pam <- factor(clusters_pam[match(pcoa_df$site, names(clusters_pam))])
 
-ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_pam)) +
-  geom_point(size = 1, alpha = 0.8) +
-  theme_classic() +
-  labs(title = "PCoA - PAM clustering",
-       color = "Cluster")
-table(clusters_pam)
+pam_result$silinfo$avg.width # silhouette
+pcoa_df$cluster_pam <- factor(clusters_pam[pcoa_df$site]) # assign clusters 
 
-
+# rename PAM clusters to match hierarchical labels
 pcoa_df$cluster_pam <- recode(
   as.character(pcoa_df$cluster_pam),
-  "1" = "3",
-  "2" = "1",
-  "3" = "2"
+  "3" = "1",
+  "2" = "3",
+  "1" = "2"
 )
 
-pcoa_df$cluster_pam <- factor(
-  pcoa_df$cluster_pam,
-  levels = c("1", "2", "3")
-)
+
+# K-MEANS ----------------
+set.seed(123)
+km_result <- kmeans(pcoa_coords,centers = 3,nstart = 50)
+
+pcoa_df$cluster_kmeans <- factor(km_result$cluster) # assign clusters
+
+
+# COMPARISON BETWEEN METHODS ---------------------------------------------------
+
+# Silueta
+sil_kmeans <- silhouette(km_result$cluster,jaccard_dist)
+sil_comparison <- data.frame(method = c("Hierarchical", "PAM", "K-means"),
+  silhouette = c(mean(sil_h[, "sil_width"]),
+                 pam_result$silinfo$avg.width,
+                 mean(sil_kmeans[, "sil_width"])))
+print(sil_comparison)
+
+# Visualizar clustering en PCoAs 
+hier_plot <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_h)) +
+  geom_point(size = 1, alpha = 0.8) +
+  theme_classic() +
+  labs(title = "PCoA - Hierarchical clustering",color = "Cluster")
+pam_plot <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_pam)) +
+  geom_point(size = 1, alpha = 0.8) +
+  theme_classic() +
+  labs(title = "PCoA - PAM clustering", color = "Cluster")
+kmean_plot <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster_kmeans)) +
+  geom_point(size = 1, alpha = 0.8) +
+  theme_classic() +
+  labs(title = paste0("PCoA - K-means (", n_coords, " coordinates)"), color = "Cluster")
+
+grid.arrange(hier_plot, pam_plot, kmean_plot, nrow = 1)
+
+# Ver distribucion de temperaturas por clusters (boxplots)
+clusters_long <- pcoa_df %>%
+  select(site, temperature_..C., cluster_h, cluster_pam, cluster_kmeans) %>%
+  pivot_longer(cols = starts_with("cluster_"), names_to = "method", values_to = "cluster") %>%
+  mutate(
+    method = recode(method, cluster_h = "Hierarchical", cluster_pam = "PAM", cluster_kmeans = "K-means"))
+
+ggplot(clusters_long, aes(x = cluster, y = temperature_..C., fill = cluster)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.5, size = 1) +
+  facet_wrap(~method) +
+  theme_classic() +
+  labs(title = "Temperature distribution across microbial clusters", x = "Cluster", y = "Temperature (°C)") +
+  guides(fill = "none")
+
+cluster_counts <- clusters_long %>%
+  group_by(method, cluster) %>%
+  summarise(n = n_distinct(site), .groups = "drop") %>%
+  mutate(cluster_label = paste0("Cluster ", cluster, "\n(n = ", n, ")"))
+
+# TEMPERATURE CORRELATION WITH PCoA1 -------------------------------------------
+
+
+
+
+
