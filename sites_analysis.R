@@ -4,10 +4,11 @@
 # october-2026 #################################
 
 # libraries
-library(tidyverse)
+library(tidyr)
 library(ggplot2)
-library(patchwork)
-library(purrr)
+library(vegan)      
+library(cluster)    
+library(gridExtra)  
 
 meta_mags <- read.csv("~/metadata/metadata.csv")
 meta_bgcs <- read.csv("~/metadata/bgcs_metadata.csv")
@@ -15,17 +16,19 @@ meta_sites <- read.csv("~/metadata/meta_sites.csv")
 source("~/MAGs_BGCs_interactions/functions.R")
 
 meta_sites <- meta_sites %>%
-  filter(n_mags >= 8) %>%
-  filter(depth < 2000)
-meta_mags <- meta_mags %>%           
-  semi_join(meta_sites, by = "sites")
-meta_sites <- meta_sites %>%
-  filter(!is.na(temperature_..C.)) %>%
+  filter(n_mags >= 8,
+         depth < 2000,
+         !is.na(temperature_..C.))%>%
   arrange(desc(temperature_..C.)) %>%
   mutate(temp_group = case_when(
     row_number() <= 150 ~ "high",
     row_number() <= 300 ~ "medium",
     TRUE ~ "low"))
+meta_mags <- meta_mags %>%           
+  semi_join(meta_sites, by = "sites")
+site_info <- meta_sites %>%
+  select(sites, temperature_..C., depth_layer, depth, temp_group) %>%
+  distinct()
 
 # SEQUENCING QUALITY CONTROL ------------------
 # MAGs
@@ -103,24 +106,16 @@ sites_matrix <- sites_matrix[rowSums(sites_matrix) > 0, , drop = FALSE] # quitar
 
 # Jaccard distances ------------------------------------------------------------
 jaccard_dist <- vegdist(sites_matrix, method = "jaccard", binary = TRUE)
-pcoa <- cmdscale(jaccard_dist, k = 2, eig = TRUE)
-pcoa_scores <- as.data.frame(pcoa$points) %>%
-  setNames(c("PCoA1", "PCoA2")) %>%
-  rownames_to_column("sites") %>%
-  left_join(meta_sites %>% select(sites, temperature_..C., depth_layer, depth, temp_group) %>% distinct(), by = "sites")
+k_pcoa <- nrow(sites_matrix) - 1
+pcoa <- cmdscale(jaccard_dist, k = k_pcoa, eig = TRUE)
 
-# PCos  eigenvalues explained --------------------------------------------------
-
+# PCos & eigenvalues explained --------------------------------------------------
 # calcular varianza explicada para cada PC 
 eig <- pcoa$eig
 positive_eig <- eig[eig > 0]
 variance_explained <- 100 * positive_eig / sum(positive_eig)
 eig_df <- data.frame(axis = seq_along(variance_explained), variance = variance_explained, cumulative = cumsum(variance_explained))
 
-positive_axes <- which(eig[seq_len(ncol(pcoa$points))] > 0)
-
-
-# plot varianza explicada
 ggplot(eig_df %>% filter(axis <= 50), aes(x = axis, y = variance)) +
   geom_col() +
   geom_line() +
@@ -128,43 +123,27 @@ ggplot(eig_df %>% filter(axis <= 50), aes(x = axis, y = variance)) +
   scale_x_continuous( breaks = 1:50, labels = 1:50, limits = c(0.5, 50.5)) +
   labs(x = "PCoA axis",  y = "Percentage of positive eigenvalues (%)") +
   theme_classic()
-# plot las 2 primeras PCos 
-ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
+
+pcoa_coords <- pcoa$points
+colnames(pcoa_coords) <- paste0("PCoA", seq_len(ncol(pcoa_coords)))
+n_coords <- ncol(pcoa_coords)
+pcoa_df <- as.data.frame(pcoa_coords) %>%
+  rownames_to_column("sites") %>%
+  left_join(site_info, by = "sites")
+
+ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
   geom_point(size = 2, alpha = 0.85) +
-  scale_color_manual(values = c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4"), name = "Temperature") +
+  scale_color_manual(values = c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4"),
+                     name = "Temperature") +
   labs(x = paste0("PCoA1 (", round(variance_explained[1], 2), "%)"),
        y = paste0("PCoA2 (", round(variance_explained[2], 2), "%)"),
        title = "Microbial community composition across sites") +
   theme_classic()
 
 
-# PCoA -------------------------------------------------------------------------
-
-# agregar mas coordenadas (para el kmeans)
-n_coords <- 20
-k_pcoa <- min(50, nrow(sites_matrix) - 1)
-pcoa <- cmdscale(jaccard_dist,k = k_pcoa, eig = TRUE)
-
-# sacar todas las coordenadas calculadas
-pcoa_all <- as.data.frame(pcoa$points)
-colnames(pcoa_all) <- paste0("PCoA", seq_len(ncol(pcoa_all)))
-pcoa_all <- pcoa_all %>%
-  rownames_to_column("site")
-
-# coordinates for K-means
-pcoa_coords <- pcoa_all %>%
-  select(all_of(paste0("PCoA", positive_axes[1:n_coords])))
-
-# Add metadata
-pcoa_df <- pcoa_all %>%
-  left_join(
-    meta_sites %>%
-      select(sites, temperature_..C., depth_layer, depth, temp_group) %>%
-      distinct(), by = c("site" = "sites"))
-
-
 # CLUSTERING -------------------------------------------------------------------
 # comparing different methods
+site_ids <- as.character(pcoa_df$sites)
 
 # HIERARQUICAL CLUSTER -----
 hc_jaccard <- hclust(jaccard_dist, method = "average")
@@ -193,8 +172,7 @@ pcoa_df$cluster_pam <- recode(
 # K-MEANS ----------------
 set.seed(123)
 km_result <- kmeans(pcoa_coords,centers = 3,nstart = 50)
-
-pcoa_df$cluster_kmeans <- factor(km_result$cluster) # assign clusters
+pcoa_df$cluster_kmeans <- factor(km_result$cluster[site_ids]) # assign clusters
 
 
 # COMPARISON BETWEEN METHODS ---------------------------------------------------
@@ -225,10 +203,9 @@ grid.arrange(hier_plot, pam_plot, kmean_plot, nrow = 1)
 
 # Ver distribucion de temperaturas por clusters (boxplots)
 clusters_long <- pcoa_df %>%
-  select(site, temperature_..C., cluster_h, cluster_pam, cluster_kmeans) %>%
+  select(sites, temperature_..C., cluster_h, cluster_pam, cluster_kmeans) %>%
   pivot_longer(cols = starts_with("cluster_"), names_to = "method", values_to = "cluster") %>%
-  mutate(
-    method = recode(method, cluster_h = "Hierarchical", cluster_pam = "PAM", cluster_kmeans = "K-means"))
+  mutate(method = recode(method,cluster_h = "Hierarchical", cluster_pam = "PAM", cluster_kmeans = "K-means"))
 
 ggplot(clusters_long, aes(x = cluster, y = temperature_..C., fill = cluster)) +
   geom_boxplot(alpha = 0.7, outlier.shape = NA) +
@@ -240,12 +217,45 @@ ggplot(clusters_long, aes(x = cluster, y = temperature_..C., fill = cluster)) +
 
 cluster_counts <- clusters_long %>%
   group_by(method, cluster) %>%
-  summarise(n = n_distinct(site), .groups = "drop") %>%
+  summarise(n = n_distinct(sites), .groups = "drop") %>%
   mutate(cluster_label = paste0("Cluster ", cluster, "\n(n = ", n, ")"))
+
 
 # TEMPERATURE CORRELATION WITH PCoA1 -------------------------------------------
 
+cor_res <- cor.test(pcoa_df$PCoA4, pcoa_df$temperature_..C., method = "pearson", exact = FALSE)
+lm_res  <- lm(PCoA4 ~ temperature_..C., data = pcoa_df)
+print(cor_res)
+summary(lm_res)
 
+p_val <- cor_res$p.value
+lab <- paste0("r = ", round(cor_res$estimate, 3),
+              "\nR² = ", round(summary(lm_res)$r.squared, 3),
+              "\np ", ifelse(p_val < 0.001, "< 0.001", paste0("= ", round(p_val, 3))))
+library(patchwork)
+temp_cols <- c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4")
+x_lab     <- paste0("PCoA4 (", round(variance_explained[4], 2), "%)")
+x_range   <- range(pcoa_df$PCoA4)   # mismo rango en x para ambos
 
+p_pcoa <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
+  geom_point(size = 2, alpha = 0.85) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  scale_x_continuous(limits = x_range) +
+  labs(x = x_lab,
+       y = paste0("PCoA2 (", round(variance_explained[2], 2), "%)"),
+       title = "Microbial community composition across sites") +
+  theme_classic()
 
+p_cor <- ggplot(pcoa_df, aes(x = PCoA1, y = temperature_..C.)) +
+  geom_point(aes(color = temp_group), size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 0.8) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  scale_x_continuous(limits = x_range) +
+  annotate("text", x = Inf, y = Inf, label = lab, hjust = 1.1, vjust = 1.2, size = 4) +
+  labs(x = x_lab, y = "Temperature (°C)") +
+  guides(color = "none") +
+  theme_classic()
+# Juntar: uno sobre otro
+(p_pcoa / p_cor) +
+  plot_layout(heights = c(2, 1), guides = "collect")
 
