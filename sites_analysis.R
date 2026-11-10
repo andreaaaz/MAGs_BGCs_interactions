@@ -223,8 +223,8 @@ cluster_counts <- clusters_long %>%
 
 # TEMPERATURE CORRELATION WITH PCoA1 -------------------------------------------
 
-cor_res <- cor.test(pcoa_df$PCoA4, pcoa_df$temperature_..C., method = "pearson", exact = FALSE)
-lm_res  <- lm(PCoA4 ~ temperature_..C., data = pcoa_df)
+cor_res <- cor.test(pcoa_df$PCoA1, pcoa_df$temperature_..C., method = "pearson", exact = FALSE)
+lm_res  <- lm(PCoA1 ~ temperature_..C., data = pcoa_df)
 print(cor_res)
 summary(lm_res)
 
@@ -234,8 +234,8 @@ lab <- paste0("r = ", round(cor_res$estimate, 3),
               "\np ", ifelse(p_val < 0.001, "< 0.001", paste0("= ", round(p_val, 3))))
 library(patchwork)
 temp_cols <- c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4")
-x_lab     <- paste0("PCoA4 (", round(variance_explained[4], 2), "%)")
-x_range   <- range(pcoa_df$PCoA4)   # mismo rango en x para ambos
+x_lab     <- paste0("PCoA1 (", round(variance_explained[1], 2), "%)")
+x_range   <- range(pcoa_df$PCoA1)   # mismo rango en x para ambos
 
 p_pcoa <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
   geom_point(size = 2, alpha = 0.85) +
@@ -258,4 +258,84 @@ p_cor <- ggplot(pcoa_df, aes(x = PCoA1, y = temperature_..C.)) +
 # Juntar: uno sobre otro
 (p_pcoa / p_cor) +
   plot_layout(heights = c(2, 1), guides = "collect")
+
+
+
+
+
+
+filt_pcoa <- pcoa_df %>%
+  filter(PCoA1 > 0)
+cor_res <- cor.test(filt_pcoa$PCoA3, filt_pcoa$temperature_..C., method = "pearson", exact = FALSE)
+lm_res  <- lm(PCoA3 ~ temperature_..C., data = filt_pcoa)
+print(cor_res)
+summary(lm_res)
+
+p_val <- cor_res$p.value
+lab <- paste0("r = ", round(cor_res$estimate, 3),
+              "\nR² = ", round(summary(lm_res)$r.squared, 3),
+              "\np ", ifelse(p_val < 0.001, "< 0.001", paste0("= ", round(p_val, 3))))
+library(patchwork)
+temp_cols <- c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4")
+x_lab     <- paste0("PCoA1 (", round(variance_explained[1], 2), "%)")
+x_range   <- range(filt_pcoa$PCoA1)   # mismo rango en x para ambos
+
+p_pcoa <- ggplot(filt_pcoa, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
+  geom_point(size = 2, alpha = 0.85) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  scale_x_continuous(limits = x_range) +
+  labs(x = x_lab,
+       y = paste0("PCoA2 (", round(variance_explained[2], 2), "%)"),
+       title = "Microbial community composition across sites") +
+  theme_classic()
+
+p_cor <- ggplot(filt_pcoa, aes(x = PCoA1, y = temperature_..C.)) +
+  geom_point(aes(color = temp_group), size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 0.8) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  scale_x_continuous(limits = x_range) +
+  annotate("text", x = Inf, y = Inf, label = lab, hjust = 1.1, vjust = 1.2, size = 4) +
+  labs(x = x_lab, y = "Temperature (°C)") +
+  guides(color = "none") +
+  theme_classic()
+# Juntar: uno sobre otro
+(p_pcoa / p_cor) +
+  plot_layout(heights = c(2, 1), guides = "collect")
+
+
+
+ggplot(filt_pcoa, aes(x = PCoA3, y = temperature_..C.)) +
+  geom_point(aes(color = temp_group), size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 0.8) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  scale_x_continuous(limits = x_range) +
+  annotate("text", x = Inf, y = Inf, label = lab, hjust = 1.1, vjust = 1.2, size = 4) +
+  labs(x = x_lab, y = "Temperature (°C)") +
+  guides(color = "none") +
+  theme_classic()
+
+
+
+
+
+
+
+
+
+pcoa_df <- pcoa_df %>%
+  left_join(meta_sites %>% select(sites, n_mags) %>% distinct(), by = "sites")
+cor.test(pcoa_df$PCoA1, pcoa_df$n_mags, method = "spearman")
+
+# puedes hacer poa1 vs pcoa 2 pero que el color sea por n_mags?
+
+
+
+
+
+# Gráfica
+ggplot(pcoa_df, aes(x = temperature_..C., y = n_mags, color = temp_group)) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "loess", se = TRUE, color = "black", linewidth = 0.8) +
+  scale_color_manual(values = temp_cols, name = "Temperature") +
+  theme_classic()
 
