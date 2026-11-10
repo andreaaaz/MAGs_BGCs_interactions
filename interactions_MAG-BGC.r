@@ -59,6 +59,14 @@ meta_bgcs <- meta_bgcs %>%
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
+
+# message
+message("This analysis were performed with: ", ncol(mags_by_sites), "mOTUs")
+message("This analysis were performed with: ", ncol(bgcs_by_sites), "GCCs")
+message("This analysis were performed with: ", ncol(mags_by_sites), "mOTUs")
+message("This analysis were performed with: ", ncol(bgcs_by_sites), "GCCs")
+
+
 ############### Workflow ##############################
 
 # tabla donde se va a guardar informacion de los patrones
