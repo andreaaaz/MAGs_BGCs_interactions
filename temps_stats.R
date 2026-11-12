@@ -128,29 +128,27 @@ write.csv(edge_stats, file.path(opt$outdir, paste0(opt$type, "_edge_stats.csv"))
 
 # DISSIMILARITY OF SPECIES
 
-
-
 # load data
-base_dir <- "~/interactions/08_interactions/mOTUs_Species_Cluster_gcc/"      
-net_type <- "mb"       
-temps    <- c("global", "low", "mid", "high")
+# base_dir <- "~/interactions/08_interactions/mOTUs_Species_Cluster_gcc/"      
+# net_type <- "mb"       
+# temps    <- c("global", "low", "mid", "high")
+# 
+# make_network <- function(edges_file, nodes_file) {
+#   edges <- read.csv(edges_file, stringsAsFactors = FALSE)
+#   nodes <- read.csv(nodes_file, stringsAsFactors = FALSE)
+#   
+#   if ("node" %in% names(nodes))
+#     nodes <- nodes %>% rename(id = node)
+#   
+#   graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
+# }
+# edges_files <- file.path(base_dir, temps, paste0("edges_", net_type, ".csv"))
+# nodes_files <- file.path(base_dir, temps, paste0("nodes_", net_type, ".csv"))
+# networks <- purrr::map2(edges_files, nodes_files, make_network)
+# names(networks) <- temps
 
-make_network <- function(edges_file, nodes_file) {
-  edges <- read.csv(edges_file, stringsAsFactors = FALSE)
-  nodes <- read.csv(nodes_file, stringsAsFactors = FALSE)
-  
-  if ("node" %in% names(nodes))
-    nodes <- nodes %>% rename(id = node)
-  
-  graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
-}
-edges_files <- file.path(base_dir, temps, paste0("edges_", net_type, ".csv"))
-nodes_files <- file.path(base_dir, temps, paste0("nodes_", net_type, ".csv"))
-networks <- purrr::map2(edges_files, nodes_files, make_network)
-names(networks) <- temps
 
-
-# calc
+# calc dissimilarity
 edge_keys <- function(g) {
   el <- as_edgelist(g, names = TRUE)
   data.frame(a = pmin(el[,1], el[,2]), b = pmax(el[,1], el[,2]), stringsAsFactors = FALSE)
@@ -174,7 +172,10 @@ beta_links <- function(g1, g2) {
   WN <- sorensen(key(k1), key(k2))                              # total
   OS <- sorensen(key(only_shared(k1)), key(only_shared(k2)))    # rewiring
   S  <- sorensen(V(g1)$name, V(g2)$name)                        # especies
-  data.frame(S = S, OS = OS, ST = WN - OS, WN = WN,
+  data.frame(S = S, 
+             OS = OS, 
+             ST = WN - OS, 
+             WN = WN, 
              prop_rewiring = OS / WN)
 }
 
@@ -183,53 +184,61 @@ pairs <- combn(names(networks), 2, simplify = FALSE)
 beta_df <- do.call(rbind, lapply(pairs, function(p) {
   cbind(t1 = p[1], t2 = p[2], beta_links(networks[[p[1]]], networks[[p[2]]]))
 }))
+write.csv(beta_df,  file.path(opt$outdir, paste0(opt$type, "dissimilarity.csv")), row.names = FALSE)
+
+# graph 
+beta_vs <- beta_df %>%
+  mutate(comparison = paste(t1, t2, sep = " vs "),
+         comparison = factor(comparison, levels = c("global vs low", "global vs mid", "global vs high",
+                                               "low vs mid", "low vs high", "mid vs high")))
+beta_long <- beta_vs %>%
+  select(comparison, OS, ST) %>%
+  pivot_longer(cols = c(OS, ST), names_to = "component", values_to = "value") %>%
+  mutate(component = recode(component, OS = "Rewiring", ST = "Turnover"))
+
+dissimilarity <- ggplot(beta_long, aes(x = comparison, y = value, fill = component)) +
+  geom_col(width = 0.7) +
+  geom_text(data = beta_vs, aes(x = comparison, y = WN, label = round(WN, 2)),
+    inherit.aes = FALSE, vjust = -0.5, size = 3.5) +
+  scale_y_continuous(limits = c(0, 1.08), breaks = seq(0, 1, 0.2)) +
+  labs(x = "Temperature comparison", y = "Network dissimilarity (βWN)",
+    fill = "Component", title = "Decomposition of network dissimilarity") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top")
+
+ggsave()
 
 
 # NESTEDNESS AND MODULARITY
-
 library(bipartite)
-
-library(igraph)
-library(bipartite)
-
-# 1. grafo -> matriz de incidencia (filas = un lado, columnas = el otro)
+# matriz de incidencia 
 to_web <- function(g, type_col = "type") {
   tp <- vertex_attr(g, type_col)
-  # bipartite necesita un vector lógico: TRUE para un lado, FALSE para el otro
   V(g)$type <- tp == unique(tp)[1]
-  stopifnot(is_bipartite(g))   # falla si hay enlaces dentro del mismo lado
+  stopifnot(is_bipartite(g))
   
-  web <- as_biadjacency_matrix(g, types = V(g)$type, sparse = FALSE)
-  web[rowSums(web) > 0, colSums(web) > 0, drop = FALSE]  # quita nodos sin enlaces
+  web <- as_biadjacency_matrix(
+    g,
+    types = V(g)$type,
+    sparse = FALSE
+  )
+  web[rowSums(web) > 0, colSums(web) > 0, drop = FALSE]
 }
-
-# 2. métricas de una red, con z-score contra modelo nulo
-net_metrics <- function(g, n_null = 100, n_mod_runs = 5) {
+net_metrics <- function(g) {
   web <- to_web(g)
-  
+  # Nestedness
   nodf <- unname(networklevel(web, index = "NODF"))
-  
-  # computeModules es estocástico: repetir y quedarse con el mayor Q
-  Q <- max(replicate(n_mod_runs, computeModules(web)@likelihood))
-  
-  nulls     <- nullmodel(web, N = n_null, method = "swap.web")
-  null_nodf <- sapply(nulls, function(m) unname(networklevel(m, index = "NODF")))
-  null_Q    <- sapply(nulls, function(m) computeModules(m)@likelihood)
-  
-  data.frame(n_rows = nrow(web), n_cols = ncol(web), n_links = sum(web > 0),
-             NODF = nodf, NODF_z = (nodf - mean(null_nodf)) / sd(null_nodf),
-             Q = Q,       Q_z    = (Q - mean(null_Q)) / sd(null_Q))
+  # Modularity
+  mod <- computeModules(web)
+  Q <- mod@likelihood
+  data.frame(n_rows = nrow(web),
+             n_cols = ncol(web), 
+             n_links = sum(web > 0),
+             NODF = nodf, Q = Q)
 }
 
-# 3. correr en todas las temperaturas
 metrics <- do.call(rbind, lapply(names(networks), function(t) {
   message("Procesando: ", t)
   cbind(temp = t, net_metrics(networks[[t]]))
+  
 }))
-
-print(metrics)
-write.csv(metrics, file.path(outdir, paste0(type, "_nestedness_modularity.csv")),
-          row.names = FALSE)
-
-
-
