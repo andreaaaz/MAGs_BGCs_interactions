@@ -260,82 +260,84 @@ p_cor <- ggplot(pcoa_df, aes(x = PCoA1, y = temperature_..C.)) +
   plot_layout(heights = c(2, 1), guides = "collect")
 
 
-
-
-
-
-filt_pcoa <- pcoa_df %>%
-  filter(PCoA1 > 0)
-cor_res <- cor.test(filt_pcoa$PCoA3, filt_pcoa$temperature_..C., method = "pearson", exact = FALSE)
-lm_res  <- lm(PCoA3 ~ temperature_..C., data = filt_pcoa)
-print(cor_res)
-summary(lm_res)
-
-p_val <- cor_res$p.value
-lab <- paste0("r = ", round(cor_res$estimate, 3),
-              "\nR² = ", round(summary(lm_res)$r.squared, 3),
-              "\np ", ifelse(p_val < 0.001, "< 0.001", paste0("= ", round(p_val, 3))))
-library(patchwork)
-temp_cols <- c("high" = "#B30000", "medium" = "#FC8D59", "low" = "#41B6C4")
-x_lab     <- paste0("PCoA1 (", round(variance_explained[1], 2), "%)")
-x_range   <- range(filt_pcoa$PCoA1)   # mismo rango en x para ambos
-
-p_pcoa <- ggplot(filt_pcoa, aes(x = PCoA1, y = PCoA2, color = temp_group, shape = depth_layer)) +
-  geom_point(size = 2, alpha = 0.85) +
-  scale_color_manual(values = temp_cols, name = "Temperature") +
-  scale_x_continuous(limits = x_range) +
-  labs(x = x_lab,
-       y = paste0("PCoA2 (", round(variance_explained[2], 2), "%)"),
-       title = "Microbial community composition across sites") +
-  theme_classic()
-
-p_cor <- ggplot(filt_pcoa, aes(x = PCoA1, y = temperature_..C.)) +
-  geom_point(aes(color = temp_group), size = 2, alpha = 0.8) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 0.8) +
-  scale_color_manual(values = temp_cols, name = "Temperature") +
-  scale_x_continuous(limits = x_range) +
-  annotate("text", x = Inf, y = Inf, label = lab, hjust = 1.1, vjust = 1.2, size = 4) +
-  labs(x = x_lab, y = "Temperature (°C)") +
-  guides(color = "none") +
-  theme_classic()
-# Juntar: uno sobre otro
-(p_pcoa / p_cor) +
-  plot_layout(heights = c(2, 1), guides = "collect")
-
-
-
-ggplot(filt_pcoa, aes(x = PCoA3, y = temperature_..C.)) +
-  geom_point(aes(color = temp_group), size = 2, alpha = 0.8) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 0.8) +
-  scale_color_manual(values = temp_cols, name = "Temperature") +
-  scale_x_continuous(limits = x_range) +
-  annotate("text", x = Inf, y = Inf, label = lab, hjust = 1.1, vjust = 1.2, size = 4) +
-  labs(x = x_lab, y = "Temperature (°C)") +
-  guides(color = "none") +
-  theme_classic()
-
-
-
-
-
-
-
-
-
+## CHECK DIVERSITY CORRELATION
 pcoa_df <- pcoa_df %>%
   left_join(meta_sites %>% select(sites, n_mags) %>% distinct(), by = "sites")
 cor.test(pcoa_df$PCoA1, pcoa_df$n_mags, method = "spearman")
 
-# puedes hacer poa1 vs pcoa 2 pero que el color sea por n_mags?
-
-
-
-
-
 # Gráfica
-ggplot(pcoa_df, aes(x = temperature_..C., y = n_mags, color = temp_group)) +
+ggplot(pcoa_df, aes(x = PCoA1, y = n_mags, color = temp_group)) +
   geom_point(size = 2, alpha = 0.8) +
   geom_smooth(method = "loess", se = TRUE, color = "black", linewidth = 0.8) +
   scale_color_manual(values = temp_cols, name = "Temperature") +
   theme_classic()
 
+
+## FINAL SET GEOGRAPHY
+
+library(terra)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+sites <- meta_sites %>%
+  select(sites, latitude, longitude, temp_group) %>%
+  group_by(sites) %>%
+  summarise(longitude = first(longitude), latitude = first(latitude), temp_group = first(temp_group), .groups = "drop") %>%
+  filter(!is.na(longitude), !is.na(latitude))
+mundo <- ne_countries(scale = "medium", returnclass = "sf")
+oceanos <- ne_download(scale = "medium", type = "ocean", category = "physical", returnclass = "sf")
+
+map <- ggplot() + 
+  geom_sf(data = oceanos, fill = "#E6F2F5", color = NA) +
+  geom_sf(data = mundo, fill = "#4C788A", color = NA) +
+  geom_point(data = sites, aes(x = longitude, y = latitude, color = temp_group),
+             alpha = 0.8, size = 0.2, position = position_jitter(width = 1, height = 1)) +
+  scale_color_manual(values = temp_cols, name = "Temperature set", breaks = c("high", "medium", "low")) +
+  # coord_sf(expand = FALSE) +
+  theme_minimal(base_size = 16) +
+  theme(plot.background = element_rect(fill = NA, color = NA),   # fondo transparente
+         panel.background = element_rect(fill = NA, color = NA),  # panel transparente
+         legend.background = element_rect(fill = NA, color = NA), # fondo de leyenda transparente
+         legend.key = element_rect(fill = NA, color = NA),        # clave de leyenda transparente
+         axis.text = element_text(size = 11),
+         axis.title = element_text(size = 11),
+         legend.title = element_text(size = 16, face = "bold"),
+         legend.text = element_text(size = 16))
+map
+ggsave("map.png", plot = map, width = 42, height = 22, units = "cm", bg = "transparent")
+
+
+# BOXPLOT Distribution of variables between sets
+# changing date to month and hour
+meta_sites <- meta_sites %>%
+  mutate(date = ymd_hms(date),month = month(date, label = TRUE, abbr = FALSE), hour = hour(date))
+
+vars <- c( "temperature_..C.", "oxygen_.µmol.kg.", "longitude", "latitude", "depth", "n_mags")
+boxplot_df <- meta_sites %>%
+  select(all_of(c("temp_group", vars))) %>%
+  pivot_longer(cols = all_of(vars), names_to = "variable", values_to = "value") %>%
+  mutate(value = if_else(variable == "latitude", abs(value), value),
+         temp_group = factor(temp_group,levels = c("high", "medium", "low")))
+
+ggplot(boxplot_df,aes(x = temp_group, y = value, fill = temp_group)) +
+  geom_boxplot(alpha = 0.8, outlier.shape = 21, outlier.size = 1, width = 0.6) +
+  facet_wrap(~ variable, scales = "free_y", ncol = 3) +
+  scale_fill_manual(values = cols) +
+  labs(x = "Temperature set", y = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none", strip.text = element_text(face = "bold", size = 11),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    panel.grid.minor = element_blank())
+
+
+ggplot(meta_sites, aes(x = factor(hour), fill = temp_group)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = cols) +
+  scale_x_discrete(drop = FALSE) +
+  labs(
+    x = "Sampling hour",
+    y = "Number of sites",
+    fill = "Temperature set"
+  ) +
+  theme_minimal()
