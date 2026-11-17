@@ -191,10 +191,10 @@ process TEMPS_STATS {
         path(edges, stageAs: '??/*'), path(nodes, stageAs: '??/*')
 
     output:
-    path("${network_type}.png"), emit: plots
-    path("${network_type}_stats.csv"), emit: stats
-    path("${network_type}_edge_stats.png"), emit: edge_plots
-    path("${network_type}_edge_stats.csv"), emit: edge_stats
+    path "nodes/*",         emit: nodes
+    path "edges/*",         emit: edges
+    path "dissimilarity/*", emit: dissimilarity
+    path "nest_mod/*",      emit: nest_mod
 
     script:
     """
