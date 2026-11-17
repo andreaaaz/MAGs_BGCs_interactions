@@ -94,11 +94,12 @@ norm_closeness <- densityplot(stats, "norm_closeness")
 eigenvector <- densityplot(stats, "eigenvector")
 
 # saving image and table
-png(file.path(opt$outdir, paste0(opt$type, "nodes", "n_density.png")),width = 2000,height = 1600, res = 200) 
+png(file.path(opt$outdir, "nodes", paste0(opt$type, "_density.png")),
+    width = 2000, height = 1600, res = 200)
 grid.arrange(norm_degree, norm_betweenness, norm_closeness, eigenvector)
 dev.off()
 
-write.csv(stats, file.path(opt$outdir, paste0(opt$type, "nodes", "n_stats.csv")), row.names = FALSE)
+write.csv(stats, file.path(opt$outdir, "nodes", paste0(opt$type, "_stats.csv")), row.names = FALSE)
 
 #---------------------------------------------------------------------
 # EDGES STATS
@@ -145,21 +146,22 @@ edge_betweenness_plot <- edge_densityplot(edge_stats, "log_edge_betweenness", pa
   labs(x = "log(1 + edge betweenness)")
 edge_connectivity_plot <- edge_densityplot(edge_stats, "edge_connectivity", paste(opt$type, "- Edge connectivity"))
 
-png(file.path(opt$outdir, paste0(opt$type, "e_density.png")), width = 2000, height = 800, res = 200)
+png(file.path(opt$outdir, "edges", paste0(opt$type, "_density.png")),
+    width = 2000, height = 800, res = 200)
 grid.arrange( edge_betweenness_plot,edge_connectivity_plot,ncol = 2)
 dev.off()
 
-write.csv(edge_stats, file.path(opt$outdir, paste0(opt$type, "e_stats.csv")), row.names = FALSE) # necesito que se guarde en temp_stats/edges/
-
+write.csv(edge_stats, file.path(opt$outdir, "edges", paste0(opt$type, "_stats.csv")), row.names = FALSE)
 #---------------------------------------------------------------------
 # DISSIMILARITY OF SPECIES
 
 dir.create(file.path(opt$outdir, "dissimilarity"), showWarnings = FALSE, recursive = TRUE)
 
-# calc dissimilarity
-edge_keys <- function(g) {
+# calc dissimilarity (hay interpretacion para las MAG-BGC?)
+edge_keys <- function(g) { # para las aristas
   el <- as_edgelist(g, names = TRUE)
-  data.frame(a = pmin(el[,1], el[,2]), b = pmax(el[,1], el[,2]), stringsAsFactors = FALSE)
+  keys <- data.frame(a = pmin(el[,1], el[,2]), b = pmax(el[,1], el[,2]), stringsAsFactors = FALSE)
+  unique(keys) # redes MAG-MAG van a tener aristas repetidas, no queremos contarlas dos veces
 }
 
 sorensen <- function(x, y) {           # x, y = vectores de aristas
@@ -188,17 +190,23 @@ beta_links <- function(g1, g2) {
 }
 
 # todas las parejas de temperaturas
+
+comparison_order <- c("global vs low", "global vs mid", "global vs high", # asegurarnos de que
+                      "low vs mid", "mid vs high", "low vs high")         # el orden coincida
+
 pairs <- combn(names(networks), 2, simplify = FALSE)
 beta_df <- do.call(rbind, lapply(pairs, function(p) {
-  cbind(t1 = p[1], t2 = p[2], beta_links(networks[[p[1]]], networks[[p[2]]]))
+  comparison <- comparison_order[vapply(comparison_order, function(x) {
+    setequal(strsplit(x, " vs ")[[1]], p)
+    }, logical(1))]
+  
+  cbind(comparison = comparison[1], t1 = p[1], t2 = p[2], beta_links(networks[[p[1]]], networks[[p[2]]]))
 }))
-write.csv(beta_df,file.path(opt$outdir, paste0(opt$type, "dissimilarity" ,"d_stats.csv")), row.names = FALSE)
+beta_df$comparison <- factor(beta_df$comparison, levels = comparison_order)
+
+write.csv(beta_df, file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_dissimilarity_stats.csv")), row.names = FALSE)
 
 # graph 
-beta_vs <- beta_df %>%
-  mutate(comparison = paste(t1, t2, sep = " vs "),
-         comparison = factor(comparison, levels = c("global vs low", "global vs mid", "global vs high",
-                                               "low vs mid", "low vs high", "mid vs high")))
 beta_long <- beta_vs %>%
   select(comparison, OS, ST) %>%
   pivot_longer(cols = c(OS, ST), names_to = "component", values_to = "value") %>%
@@ -214,14 +222,42 @@ dissimilarity <- ggplot(beta_long, aes(x = comparison, y = value, fill = compone
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top")
 
-ggsave(dissimilarity, )
+ggsave(filename = file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_dissimilarity.png")), 
+       plot = dissimilarity, width = 10, height = 7, dpi = 300)
 
 #---------------------------------------------------------------------
 # NESTEDNESS AND MODULARITY
 
 dir.create(file.path(opt$outdir, "nest_mod"), showWarnings = FALSE, recursive = TRUE)
 
-# matriz de incidencia 
+# necesito adaptar para redes MAG-MAG unipartitas
+unodf <- function(g) {
+  # adjacency matrix
+  A <- as.matrix(as_adjacency_matrix(g, sparse = FALSE))
+  A <- 1L * (A > 0)
+  diag(A) <- 0 # remove self-loops
+  n <- nrow(A)
+  if (n < 2) return(NA_real_)
+  k <- rowSums(A) # degree 
+  
+  # pairs of nodes
+  pairs <- combn(seq_len(n), 2)
+  pair_scores <- vapply(seq_len(ncol(pairs)), function(p) {
+    i <- pairs[1, p]
+    j <- pairs[2, p]
+    # degree = or 0 degree: no contribution
+    if (k[i] == k[j] || min(k[i], k[j]) == 0) {
+      return(0)
+    }
+    # shared neighbors / degree of less connected node
+    overlap <- sum(A[i, ] * A[j, ])
+    overlap / min(k[i], k[j])
+  }, numeric(1))
+  # promedio de todos los pares
+  mean(pair_scores)
+}
+
+# para redes bipartita MAG-BGC
 to_web <- function(g, type_col = "type") {
   tp <- vertex_attr(g, type_col)
   V(g)$type <- tp == unique(tp)[1]
@@ -230,28 +266,35 @@ to_web <- function(g, type_col = "type") {
   web <- as_biadjacency_matrix(g, types = V(g)$type, sparse = FALSE)
   web[rowSums(web) > 0, colSums(web) > 0, drop = FALSE]
 }
-net_metrics <- function(g) {
-  web <- to_web(g)
-  # Nestedness
-  nodf <- unname(networklevel(web, index = "NODF"))
-  # Modularity
-  mod <- computeModules(web)
-  Q <- mod@likelihood
-  data.frame(n_rows = nrow(web),
-             n_cols = ncol(web), 
-             n_links = sum(web > 0),
-             NODF = nodf, Q = Q)
+
+# calcular segun bipartita o unipartita
+net_metrics <- function(g, network_type) {
+  # bipartita
+  if (network_type == "mb") {
+    web <- to_web(g)
+    web <- 1 * (web > 0)
+    
+    nodf <- unname(networklevel(web, index = "NODF")) # nestedness
+    mod <- computeModules(web) # modularity
+    Q <- mod@likelihood
+    
+  } else {  # unipartita
+  
+    nodf <- unodf(g)  # nestedness
+    # quitar loops y multiples edges para no calcularlos
+    g_simple <- simplify(g, remove.multiple = TRUE, remove.loops = TRUE)
+    # modularity
+    if (ecount(g_simple) == 0) {
+      Q <- NA_real_
+    } else {
+      mod <- cluster_louvain(g_simple, weights = NA)
+      Q <- modularity(mod, weights = NA)
+    }
+  }
+  data.frame(n_nodes = vcount(g),n_edges = ecount(g), nestedness = nodf,modularity = Q)
 }
 
-metrics <- do.call(rbind, lapply(names(networks), function(t) {
-  message("Procesando: ", t)
-  cbind(temp = t, net_metrics(networks[[t]]))
-}))
-
-write.csv()
-
-
-
+write.csv(metrics, file.path(opt$outdir, "nest_mod", paste0(opt$type, "_nest_mod_stats.csv")), row.names = FALSE)
 
 # load data out of nextflow
 
