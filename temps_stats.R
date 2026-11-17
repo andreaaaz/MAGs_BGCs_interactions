@@ -181,6 +181,24 @@ png(file.path(opt$outdir, "edges", paste0(opt$type, "_euler.png"), width = 2000,
 plot(euler_edges, quantities = TRUE, main = "Shared edges across temperatures")
 
 #---------------------------------------------------------------------
+# JACCARD INDEX (also for understanding dissimilarity?)
+
+edge_matrix <- table( # presencia/ ausencia de aristas
+  factor(rep(names(edges_sets), lengths(edges_sets)),
+         levels = names(edges_sets)),
+  factor(unlist(edges_sets), 
+         levels = unique(unlist(edges_sets))
+  ))
+
+edge_matrix[edge_matrix > 0] <- 1
+# distancia con vegan
+jaccard_dist <- vegdist(edge_matrix, method = "jaccard", binary = TRUE)
+# convertir a similitud
+jaccard_sim <- 1 - as.matrix(jaccard_dist)
+
+write.csv(jaccard_sim, file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_jaccard.csv")), row.names = FALSE)
+
+#---------------------------------------------------------------------
 # DISSIMILARITY OF SPECIES
 
 dir.create(file.path(opt$outdir, "dissimilarity"), showWarnings = FALSE, recursive = TRUE)
@@ -218,10 +236,8 @@ beta_links <- function(g1, g2) {
 }
 
 # todas las parejas de temperaturas
-
 comparison_order <- c("global vs low", "global vs mid", "global vs high", # asegurarnos de que
                       "low vs mid", "mid vs high", "low vs high")         # el orden coincida
-
 pairs <- combn(names(networks), 2, simplify = FALSE)
 beta_df <- do.call(rbind, lapply(pairs, function(p) {
   comparison <- comparison_order[vapply(comparison_order, function(x) {
@@ -249,7 +265,6 @@ dissimilarity <- ggplot(beta_long, aes(x = comparison, y = value, fill = compone
     fill = "Component", title = "Decomposition of network dissimilarity") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top")
-
 ggsave(filename = file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_dissimilarity.png")), 
        plot = dissimilarity, width = 10, height = 7, dpi = 300)
 
@@ -321,7 +336,6 @@ net_metrics <- function(g, network_type) {
   }
   data.frame(n_nodes = vcount(g),n_edges = ecount(g), nestedness = nodf,modularity = Q)
 }
-
 write.csv(metrics, file.path(opt$outdir, "nest_mod", paste0(opt$type, "_nest_mod_stats.csv")), row.names = FALSE)
 
 # load data out of nextflow
