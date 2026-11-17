@@ -68,12 +68,13 @@ g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
 nodes$degree <- degree(g)
 
 ### Add representative groups ----
-rep_bgcs <- meta_bgcs %>%    # table with all the GCCs and their products
-  group_by(.data[[bgc_group]], products) %>%   
-  summarise(n = n(), .groups = "drop_last") %>%   # count the most common
-  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%             # between each GCC
+rep_bgcs <- meta_bgcs %>%
+  group_by(.data[[bgc_group]], products) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%                                   # <- clave
   select(id = all_of(bgc_group), rep_bgc = products)
-  
+
 rep_mags <- meta_mags %>%   #table with all the mOTUs and their families
   group_by(.data[[mag_lineage]], family) %>%
   summarise(n = n(), .groups = "drop_last") %>%
@@ -127,45 +128,45 @@ nodes <- nodes %>%
 #  collection = "Interacciones MAGs-BGCs")
 
 ### Sub y sobre abundancia productos BGCs  ----
+universo <- rep_bgcs %>%
+  ungroup() %>%
+  rename(product = rep_bgc) %>%
+  count(product, name = "K")
+N <- sum(universo$K)
+red_gccs <- cases %>%
+  distinct(Bgcs) %>%
+  left_join(rep_bgcs, by = c("Bgcs" = "id")) %>%
+  rename(product = rep_bgc)
+obs <- red_gccs %>%
+  count(product, name = "k")            # k = GCCs del producto en la red
+n <- sum(obs$k)
+enrichment <- universo %>%
+  left_join(obs, by = "product") %>%
+  mutate(k = replace_na(k, 0), observed = k / n, expected = K / N,
+    log2_enrichment = log2((k + 0.5) / n / (K / N)),   # pseudoconteo para evitar -Inf
+    p_over = phyper(k - 1, K, N - K, n, lower.tail = FALSE), # P(X >= k): sobre-representación
+    p_under = phyper(k, K, N - K, n, lower.tail = TRUE), # P(X <= k): sub-representación
+    p_value = pmin(p_over, p_under) * 2,               # dos colas
+    p_value = pmin(p_value, 1)) %>%
+  mutate(fdr = p.adjust(p_value, method = "BH"), 
+         direction = case_when(fdr < 0.05 & log2_enrichment > 0 ~ "sobre-representado",
+                               fdr < 0.05 & log2_enrichment < 0 ~ "sub-representado", TRUE ~ "ns")) %>%
+  arrange(desc(log2_enrichment))
 
-# # esperados (dataset global)
-# esp <- meta_bgcs %>%
-#   count(products) %>%
-#   mutate(rel_abundance = n / sum(n)) %>%
-#   arrange(desc(rel_abundance)) %>%
-#   rename(product = products, expected = rel_abundance)
-# # observados 
-# cases <- cases %>%
-#   left_join(rep_bgcs, by = c("Bgcs"="id")) #asignar productos a gccs de la red
-# obs <- cases %>%
-#   count(rep_bgc) %>%
-#   mutate(rel_abundance = n / sum(n)) %>%
-#   arrange(desc(rel_abundance)) %>%
-#   rename(product = rep_bgc, observed = rel_abundance)
-# 
-# enrichment <- obs %>%
-#   left_join(esp, by = "product") %>%
-#   mutate(log2_enrichment = log2(observed / expected)) %>%
-#   arrange(desc(log2_enrichment)) 
-# 
-# # grafica 
-# enrichment_plot <- enrichment %>%
-#   ggplot(aes(
-#     x = log2_enrichment,
-#     y = reorder(product, log2_enrichment),
-#   )) +
-#   geom_col() +
-#   geom_vline(xintercept = 0, linetype = "dashed") +
-#   theme_minimal() +
-#   labs(
-#     x = expression(Log[2](Observed/Expected)),
-#     y = "Biosynthetic product"
-#   )
+enrichment_plot <- enrichment %>%
+  filter(k > 0) %>%
+  ggplot(aes(x = log2_enrichment, y = reorder(product, log2_enrichment), fill = direction)) +
+  geom_col() +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("sobre-representado" = "#B2182B", "sub-representado" = "#2166AC", "ns" = "grey70")) +
+  theme_minimal() +
+  labs(x = expression(Log[2](Observed/Expected)), y = "Biosynthetic product", fill = NULL)
 
 ### Save tables & graphs ----
 write.csv(nodes, paste0(opt$outdir, "nodes_mb.csv"), row.names = FALSE)
 write.csv(edges, paste0(opt$outdir, "edges_mb.csv"), row.names = FALSE)
-# ggsave(filename = paste0(opt$outdir, "enrichment.png"), plot = enrichment_plot, width = 20, height = 10, units = "cm")
+write.csv(enrichment, paste0(opt$outdir, "enrichment.csv"), row.names = FALSE)
+ggsave(filename = file.path(opt$outdir, paste0("enrichment.png")), plot = enrichment_plot, width = 8, height = 6, dpi = 300)
 
 #------------------------------------------
 #### MAG->BGC->MAG ####
@@ -290,3 +291,61 @@ nodes_mm <- nodes_mm %>%
 write.csv(nodes_mm, paste0(opt$outdir, "nodes_mmr.csv"), row.names = FALSE)
 write.csv(edges_mm, paste0(opt$outdir, "edges_mmr.csv"), row.names = FALSE)
 
+
+
+
+
+rep_bgcs <- meta_bgcs %>%
+  group_by(.data[[bgc_group]], products) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  slice_max(order_by = n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%                                   # <- clave
+  select(id = all_of(bgc_group), rep_bgc = products)
+universo <- rep_bgcs %>%
+  ungroup() %>%
+  rename(product = rep_bgc) %>%
+  count(product, name = "K")
+N <- sum(universo$K)
+red_gccs <- cases %>%
+  distinct(Bgcs) %>%
+  left_join(rep_bgcs, by = c("Bgcs" = "id")) %>%
+  rename(product = rep_bgc)
+obs <- red_gccs %>%
+  count(product, name = "k")            # k = GCCs del producto en la red
+n <- sum(obs$k)
+enrichment <- universo %>%
+  left_join(obs, by = "product") %>%
+  mutate(
+    k = replace_na(k, 0),
+    observed = k / n,
+    expected = K / N,
+    log2_enrichment = log2((k + 0.5) / n / (K / N)),   # pseudoconteo para evitar -Inf
+    # P(X >= k): sobre-representación
+    p_over  = phyper(k - 1, K, N - K, n, lower.tail = FALSE),
+    # P(X <= k): sub-representación
+    p_under = phyper(k, K, N - K, n, lower.tail = TRUE),
+    p_value = pmin(p_over, p_under) * 2,                # aprox. bilateral
+    p_value = pmin(p_value, 1)
+  ) %>%
+  mutate(
+    fdr = p.adjust(p_value, method = "BH"),
+    direction = case_when(
+      fdr < 0.05 & log2_enrichment > 0 ~ "sobre-representado",
+      fdr < 0.05 & log2_enrichment < 0 ~ "sub-representado",
+      TRUE ~ "ns"
+    )
+  ) %>%
+  arrange(desc(log2_enrichment))
+enrichment_plot <- enrichment %>%
+  filter(k > 0) %>%
+  ggplot(aes(x = log2_enrichment,
+             y = reorder(product, log2_enrichment),
+             fill = direction)) +
+  geom_col() +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("sobre-representado" = "#B2182B",
+                               "sub-representado"   = "#2166AC",
+                               "ns"                 = "grey70")) +
+  theme_minimal() +
+  labs(x = expression(Log[2](Observed/Expected)),
+       y = "Biosynthetic product", fill = NULL)
