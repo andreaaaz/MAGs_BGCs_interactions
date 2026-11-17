@@ -58,13 +58,13 @@ get_node_stats <- function(g, network_type, temp) {
   tibble(network_type = network_type,
          temperature = temp,
          node = V(g)$name,
-         degree = degree(g),
-         norm_degree = degree(g, normalized = TRUE),
-         betweenness = betweenness(g, weights = NA),
-         norm_betweenness = betweenness(g, weights = NA, normalized = TRUE),
-         closeness = closeness(g, weights = NA),
-         norm_closeness = closeness(g, weights = NA, normalized = TRUE),
-         eigenvector = eigen_centrality(g, weights = NA)$vector)
+         degree = igraph::degree(g),
+         norm_degree = igraph::degree(g, normalized = TRUE),
+         betweenness = igraph::betweenness(g, weights = NA),
+         norm_betweenness = igraph::betweenness(g, weights = NA, normalized = TRUE),
+         closeness = igraph::closeness(g, weights = NA),
+         norm_closeness = igraph::closeness(g, weights = NA, normalized = TRUE),
+         eigenvector = igraph::eigen_centrality(g, weights = NA)$vector)
 }
 
 stats <- purrr::imap_dfr(networks,~ get_node_stats(.x, opt$type, .y))
@@ -179,7 +179,7 @@ dev.off()
 
 png(file.path(opt$outdir, "edges", paste0(opt$type, "_euler.png")), width = 2000, height = 1600, res = 300)
 plot(euler_edges, quantities = TRUE, main = "Shared edges across temperatures")
-
+dev.off() 
 #---------------------------------------------------------------------
 # JACCARD INDEX (also for understanding dissimilarity?)
 
@@ -325,7 +325,7 @@ net_metrics <- function(g, network_type) {
   
     nodf <- unodf(g)  # nestedness
     # quitar loops y multiples edges para no calcularlos
-    g_simple <- simplify(g, remove.multiple = TRUE, remove.loops = TRUE)
+    g_simple <- igraph::simplify(g, remove.multiple = TRUE, remove.loops = TRUE)
     # modularity
     if (ecount(g_simple) == 0) {
       Q <- NA_real_
