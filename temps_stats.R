@@ -11,7 +11,6 @@ suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(gridExtra))
 library(ggplot2)
-library(bipartite)
 library(eulerr)
 
 
@@ -173,15 +172,17 @@ euler_nodes <- euler(nodes_sets)
 euler_edges <- euler(edges_sets)
 
 # plot
-png(file.path(opt$outdir, "nodes", paste0(opt$type, "_euler.png"), width = 2000, height = 1600, res = 300))
+png(file.path(opt$outdir, "nodes", paste0(opt$type, "_euler.png")), width = 2000, height = 1600, res = 300)
 plot(euler_nodes, quantities = TRUE, main = "Shared nodes across temperatures")
 dev.off()
 
-png(file.path(opt$outdir, "edges", paste0(opt$type, "_euler.png"), width = 2000, height = 1600, res = 300))
+png(file.path(opt$outdir, "edges", paste0(opt$type, "_euler.png")), width = 2000, height = 1600, res = 300)
 plot(euler_edges, quantities = TRUE, main = "Shared edges across temperatures")
 
 #---------------------------------------------------------------------
 # JACCARD INDEX (also for understanding dissimilarity?)
+
+dir.create(file.path(opt$outdir, "dissimilarity"), showWarnings = FALSE, recursive = TRUE)
 
 edge_matrix <- table( # presencia/ ausencia de aristas
   factor(rep(names(edges_sets), lengths(edges_sets)),
@@ -196,12 +197,10 @@ jaccard_dist <- vegdist(edge_matrix, method = "jaccard", binary = TRUE)
 # convertir a similitud
 jaccard_sim <- 1 - as.matrix(jaccard_dist)
 
-write.csv(jaccard_sim, file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_jaccard.csv")), row.names = FALSE)
+write.csv(jaccard_sim, file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_jaccard.csv")), row.names = TRUE)
 
 #---------------------------------------------------------------------
 # DISSIMILARITY OF SPECIES
-
-dir.create(file.path(opt$outdir, "dissimilarity"), showWarnings = FALSE, recursive = TRUE)
 
 # calc dissimilarity (hay interpretacion para las MAG-BGC?)
 edge_keys <- function(g) { # para las aristas
@@ -251,14 +250,14 @@ beta_df$comparison <- factor(beta_df$comparison, levels = comparison_order)
 write.csv(beta_df, file.path(opt$outdir, "dissimilarity", paste0(opt$type, "_dissimilarity_stats.csv")), row.names = FALSE)
 
 # graph 
-beta_long <- beta_vs %>%
+beta_long <- beta_df %>%
   select(comparison, OS, ST) %>%
   pivot_longer(cols = c(OS, ST), names_to = "component", values_to = "value") %>%
   mutate(component = recode(component, OS = "Rewiring", ST = "Turnover"))
 
 dissimilarity <- ggplot(beta_long, aes(x = comparison, y = value, fill = component)) +
   geom_col(width = 0.7) +
-  geom_text(data = beta_vs, aes(x = comparison, y = WN, label = round(WN, 2)),
+  geom_text(data = beta_df, aes(x = comparison, y = WN, label = round(WN, 2)),
     inherit.aes = FALSE, vjust = -0.5, size = 3.5) +
   scale_y_continuous(limits = c(0, 1.08), breaks = seq(0, 1, 0.2)) +
   labs(x = "Temperature comparison", y = "Network dissimilarity (βWN)",
@@ -309,7 +308,7 @@ to_web <- function(g, type_col = "type") {
   web <- as_biadjacency_matrix(g, types = V(g)$type, sparse = FALSE)
   web[rowSums(web) > 0, colSums(web) > 0, drop = FALSE]
 }
-
+library(bipartite)
 # calcular segun bipartita o unipartita
 net_metrics <- function(g, network_type) {
   # bipartita
@@ -336,6 +335,11 @@ net_metrics <- function(g, network_type) {
   }
   data.frame(n_nodes = vcount(g),n_edges = ecount(g), nestedness = nodf,modularity = Q)
 }
+metrics <- do.call(rbind, lapply(names(networks), function(t) {
+  message("Processing: ", opt$type, " - ", t)
+  cbind(network_type = opt$type, temperature = t, net_metrics(networks[[t]], opt$type))
+}))
+
 write.csv(metrics, file.path(opt$outdir, "nest_mod", paste0(opt$type, "_nest_mod_stats.csv")), row.names = FALSE)
 
 # load data out of nextflow
