@@ -12,6 +12,8 @@ suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(gridExtra))
 library(ggplot2)
 library(bipartite)
+library(eulerr)
+
 
 # file args 
 option_list <- list(make_option("--type", type = "character", help = "Network type"),
@@ -152,6 +154,32 @@ grid.arrange( edge_betweenness_plot,edge_connectivity_plot,ncol = 2)
 dev.off()
 
 write.csv(edge_stats, file.path(opt$outdir, "edges", paste0(opt$type, "_stats.csv")), row.names = FALSE)
+
+#---------------------------------------------------------------------
+# NODE AND EDGE EULER DIAGRAMS (for understand dissimilarity)
+
+# sets
+nodes_sets <- lapply(networks, function(g) {
+  V(g)$name
+})
+edges_sets <- lapply(networks, function(g) {
+  ed <- as_edgelist(g, names = TRUE)
+  # no directed
+  apply(ed, 1, function(x) {
+    paste(sort(x), collapse = "--")
+  })
+})
+euler_nodes <- euler(nodes_sets)
+euler_edges <- euler(edges_sets)
+
+# plot
+png(file.path(opt$outdir, "nodes", paste0(opt$type, "_euler.png"), width = 2000, height = 1600, res = 300))
+plot(euler_nodes, quantities = TRUE, main = "Shared nodes across temperatures")
+dev.off()
+
+png(file.path(opt$outdir, "edges", paste0(opt$type, "_euler.png"), width = 2000, height = 1600, res = 300))
+plot(euler_edges, quantities = TRUE, main = "Shared edges across temperatures")
+
 #---------------------------------------------------------------------
 # DISSIMILARITY OF SPECIES
 
