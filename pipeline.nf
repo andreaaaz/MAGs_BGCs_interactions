@@ -104,7 +104,8 @@ process NETWORKS_MB {
     tuple val(temp), path("edges_mbm.csv"), emit: edges_mbm
     tuple val(temp), path("edges_mmr.csv"), emit: edges_mmr
     tuple val(temp), path("nodes_mmr.csv"), emit: nodes_mmr
-
+    path("enrichment.csv"), emit: enrichment_table
+    path("enrichment.png"), emit: enrichment_plot
 
     script:
     """
@@ -116,7 +117,7 @@ process NETWORKS_MB {
         -i ${params.indir} \
         -o ./ \
         -w ${projectDir}/ \
-        -f ${oc_mb} 
+        -f ${oc_mb}
     """
 
 }
