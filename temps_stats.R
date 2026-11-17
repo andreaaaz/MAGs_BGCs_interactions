@@ -10,6 +10,7 @@ suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(gridExtra))
+library(vegan)
 library(ggplot2)
 library(eulerr)
 

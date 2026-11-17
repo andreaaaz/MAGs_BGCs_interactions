@@ -61,10 +61,11 @@ bgcs_by_sites<- prep_bgcs(meta_bgcs, bgc_group)
 
 
 # message
-message("This analysis were performed with: ", ncol(mags_by_sites), "mOTUs")
-message("This analysis were performed with: ", ncol(bgcs_by_sites), "GCCs")
-message("This analysis were performed with: ", ncol(mags_by_sites), "mOTUs")
-message("This analysis were performed with: ", ncol(bgcs_by_sites), "GCCs")
+message("\nThis analysis was performed with:")
+message("  - ", nrow(meta_mags), " MAGs from ", nrow(meta_sites), " sites")
+message("  - ", nrow(meta_bgcs), " BGCs from ", nrow(meta_sites), " sites")
+message("  - ", ncol(mags_by_sites), " ", mag_lineage, " groups")
+message("  - ", ncol(bgcs_by_sites), " ", bgc_group, " groups")
 
 
 ############### Workflow ##############################

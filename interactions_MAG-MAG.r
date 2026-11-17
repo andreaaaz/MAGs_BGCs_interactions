@@ -54,7 +54,9 @@ meta_mags <- meta_mags %>%
 # Count how many microbial lineages and BGC groups are per site
 mags_by_sites <- prep_mags(meta_mags, mag_lineage)
 
-
+message("\nThis analysis was performed with:")
+message("  - ", nrow(meta_mags), " MAGs from ", nrow(meta_sites), " sites")
+message("  - ", ncol(mags_by_sites), " ", mag_lineage, " groups")
 ############### Workflow ##############################
 
 # tabla donde se va a guardar informacion de los patrones
