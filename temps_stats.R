@@ -160,14 +160,14 @@ write.csv(edge_stats, file.path(opt$outdir, "edges", paste0(opt$type, "_stats.cs
 
 # sets
 nodes_sets <- lapply(networks, function(g) {
-  V(g)$name
+ unique(V(g)$name)
 })
 edges_sets <- lapply(networks, function(g) {
   ed <- as_edgelist(g, names = TRUE)
   # no directed
-  apply(ed, 1, function(x) {
+  unique(apply(ed, 1, function(x) {
     paste(sort(x), collapse = "--")
-  })
+  }))
 })
 euler_nodes <- euler(nodes_sets)
 euler_edges <- euler(edges_sets)
