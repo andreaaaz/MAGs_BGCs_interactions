@@ -10,6 +10,7 @@ params.quality = "8"
 
 params.temps = ['global','low','mid','high']
 params.types = ['MAG-BGC', 'MAG-MAG', 'MAG-MAG-rec', 'consensus']
+params.force_mm = false   // true = recalcular MAG_MAG aunque ya exista
 
 process MAG_BGC {
 
@@ -211,15 +212,39 @@ process TEMPS_STATS {
 
 workflow {
     
+    // resultados preexistentes de MAG-MAG? 
+    def mm_dir  = { temp -> "${params.outdir}/${params.microbial_lineage}/${temp}" }
+    def mm_done = { temp ->
+        ['oc_filt.csv', 'edges_mm.csv', 'nodes_mm.csv'].every { f -> file("${mm_dir(temp)}/${f}").exists()}
+    }
+
+    def cached_temps = params.force_mm ? [] : params.temps.findAll { mm_done(it) }
+    def todo_temps   = params.temps - cached_temps
+
+    if (cached_temps) log.info "MAG_MAG/NETWORKS_MM omitidos (ya existen): ${cached_temps}"
+    if (todo_temps)   log.info "MAG_MAG/NETWORKS_MM se van a correr para: ${todo_temps}"
+
     temp_ch = Channel.fromList(params.temps)
-    
-    // interactions
+
+    // interactions MB
     mag_bgc_out = MAG_BGC(temp_ch)
-    mag_mag_out = MAG_MAG(temp_ch)
-    
+
+    // interactions MM
+    mag_mag_new     = MAG_MAG(Channel.fromList(todo_temps))
+    networks_mm_new = NETWORKS_MM(mag_mag_new.oc_filt_mm)
+
+    // leer de la carpeta lo que ya existe
+    edges_mm_cached = Channel.fromList(cached_temps)
+        .map { t -> tuple(t, file("${mm_dir(t)}/edges_mm.csv")) }
+    nodes_mm_cached = Channel.fromList(cached_temps)
+        .map { t -> tuple(t, file("${mm_dir(t)}/nodes_mm.csv")) }
+
     // networks
+    networks_mm_out = [
+        edges_mm: networks_mm_new.edges_mm.mix(edges_mm_cached),
+        nodes_mm: networks_mm_new.nodes_mm.mix(nodes_mm_cached)
+    ]
     networks_mb_out = NETWORKS_MB(mag_bgc_out.oc_filt)
-    networks_mm_out = NETWORKS_MM(mag_mag_out.oc_filt_mm)
 
     // consensus
     consensus_inputs = networks_mm_out.edges_mm.join(
